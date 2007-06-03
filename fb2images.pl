@@ -5,7 +5,44 @@ use XML::DOM;
 use Getopt::Long;
 use File::MMagic;
 use MIME::Base64 qw(encode_base64);
- 
+
+=head1 NAME
+
+fb2images.pl - manipulate embedded images in the FictionBook file
+
+=head1 SYNOPSIS
+
+B<fb2images.pl> B<--list> I<filename.fb2>
+
+B<fb2images.pl> B<--add> I<filename.png> B<--remove> I<image.id> I<filename.fb2>
+
+=head1 DESCRIPTION
+
+This utility allows to add new images into FB2 file, remove images and
+list them.
+
+Several operations can be performed during one operation.
+First, utility adds all images to add, then removes ones to remove and
+then lists images.
+
+Input image names are used as E<lt>binaryE<gt> element ids.
+
+=head1 BUGS
+
+Utility doesn't check if image reference presents  in the file, and is
+unable to add references.  
+
+To update image one have to remove it first and add then, and these
+operations cannot be combined into one call.
+
+There is no option to extract image into  file or stdout
+
+=head1 AUTHOR
+
+Nikolay Shaplov <shaplov@sf.net>
+
+=cut
+
 my $flags={};
 my $opts={};
   GetOptions ("lits|l" => \$opts->{'list'},
