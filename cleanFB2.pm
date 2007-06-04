@@ -22,10 +22,9 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+    
 package cleanFB2;
-#Подчистка Fb2
-#<?xml version="1.0" encoding="utf-8"?>
+#��������� Fb2
 
 use XML::Parser;
 use XML::LibXML;
@@ -90,7 +89,7 @@ my %oldjenres=(
 	Poetry=>'literature_poetry',
 	Politics=>'nonfiction_politics',
 	Religion=>'religion',
-	'Религия'=>'religion',
+	'�������'=>'religion',
 	Romance=>'romance',
 	SF=>'romance_sf',
 	Science=>'science',
@@ -122,6 +121,20 @@ my %escapesLite=(
   '>'	=> '&gt;',
   '"'	=> '&quot;',
   "'"	=> '&apos;'
+);
+
+my %u = ( 			# Unicode entities
+  'mdash'  => "\x{2014}",	# Em dash 
+  'ndash'  => "\x{2013}",	# En dash 
+  'nbsp'   => "\x{00A0}",	# No-Break Space
+  'laquo'  => "\x{00AB}",	# Left-pointing double angle quotation mark
+  'raquo'  => "\x{00BB}",	# Right-pointing double angle quotation mark
+  'bdquo'  => "\x{201E}",	# Double low-9 quotation mark
+  'ldquo'  => "\x{201C}",	# Left double quotation mark
+  'cyr_A'  => "\x{0410}",	# Cyrillic capital letter A
+  'cyr_YA' => "\x{042F}",	# Cyrillic capital letter YA
+  'cyr_a'  => "\x{0430}",       # Cyrillic small letter A
+  'cyr_ya' => "\x{044F}",       # Cyrillic small letter YA
 );
 
 sub GenerateDocInfo{
@@ -200,7 +213,7 @@ sub CleanupFB2{
 			}
 
 			if (!$BookLang && $elem =~ /(src-lang|translator|sequence)/){
-				if ($XMLBody=~/[А-Яа-я]/){
+				if ($XMLBody=~/[${u{cyr_A}}-${u{cyr_YA}}${u{cyr_a}}-${u{cyr_ya}}]/){
 					$BookLang='ru';
 				} else {
 					 $BookLang='en' if $XMLBody=~/\A[\w<>,\.\/\\"'\s]/;
@@ -260,7 +273,7 @@ sub CleanupFB2{
 			$HadDocInfo=1 if $_[1] eq 'document-info';
 
 			if (($_[1] eq 'title-info') && !$BookLang){
-				$XMLBody.="<lang>ru</lang>" if $XMLBody=~/[А-Яа-я]/;
+				$XMLBody.="<lang>ru</lang>" if $XMLBody=~/[${u{cyr_A}}-${u{cyr_YA}}${u{cyr_a}}-${u{cyr_ya}}]/;
 				$BookLang='ru';
 			}
 
@@ -281,39 +294,38 @@ sub CleanupFB2{
 	print "\nPerforming image ID's fix...\n" unless $Mute;
 	for (keys(%IDsToFix)){
 		print "'$_'->'$IDsToFix{$_}'\n";
-		$XMLBody=~s/(['"])(#)?$_['"]/$1$2$IDsToFix{$_}$1/g;
+		$XMLBody=~s/(['"])(#)?$_['"]/$1$2$IDsToFix{$_}$1/g;   #'
 	}
 	print "Performing final text cleanup...\n" unless $Mute;
 
 	# finall cleanup
 	
 	$XMLBody=~s/\A\s+//;
-	print "step 1\n";
+	print "step  1\n";
 	$XMLBody=~s/\s+\Z//;
-	print "step 2\n";
+	print "step  2\n";
 	$XMLBody=~s/(\s)\s+/$1/g;
-	print "step 3\n";
+	print "step  3\n";
 	$XMLBody=~s/([pv])>\s+/$1>/g;
-	print "step 4\n";
-	$XMLBody=~s/[-—–]{2,}/–/g;
-	print "step 5\n";
-	$XMLBody=~s/(p[^>]*>)[-—]/$1–/g;
-	print "step 6\n";
-	$XMLBody=~s/(p[^>]*>)– /$1–\&#160;/g;
-	print "step 7\n";
-	$XMLBody=~s/[-—](\s)/–$1/g;
-	print "step 8\n";
+	print "step  4: Replacing \"--\" with Em Dashes\n";
+	$XMLBody=~s/[-|${u{mdash}}|${u{ndash}}]{2,}/${u{mdash}}/g;
+	print "step  5: Replacing leading \"-\" with Em Dashes\n";
+	$XMLBody=~s/(p[^>]*>)[-|${u{ndash}}]/$1${u{mdash}}/g;
+	print "step  6: Replacing spaces after leading \"-\" with No-Break Spaces\n";
+	$XMLBody=~s/(p[^>]*>${u{mdash}}) /$1${u{nbsp}};/g;
+	print "step  7: Replace \"- \" with Em Dashes \n";
+	$XMLBody=~s/[${u{mdash}}|${u{ndash}}](\s)/${u{mdash}}$1/g;
+	print "step  8\n";
 	$XMLBody=~s/<\/p>/<\/p>\n/g;
-	print "step 9\n";
 	if ($BookLang eq 'ru'){
-		while ($XMLBody=~s/>([^>]*?([\(\s"]))?"([^\"<]+?)([^\s"\(<])"/>$1«$3$4»/g){}
-		print "step 10\n";
-		while ($XMLBody=~s/>([^>]*?)«([^»<]*?)«([^»<]*?)»/>$1«$2„$3“/g){};
+ 		print "step  9: Replacing \" with << and >>  (for Russian only)\n";
+		while ($XMLBody=~s/>([^>]*?([\(\s"]))?"([^\"<]+?)([^\s"\(<])"/>$1${u{laquo}}$3$4${u{raquo}}/g){}
+		print "step 10: Replacing << and >> than are inside another << and >> with ,, and '' (for Russian only)\n";
+		while ($XMLBody=~s/>([^>]*?)${u{laquo}}([^${u{raquo}}<]*?)${u{laquo}}([^${u{raquo}}<]*?)${u{raquo}}/>$1${u{laquo}}$2${u{bdquo}}$3${u{ldquo}}/g){}; 
 		print "step 11\n";
-	  $XMLBody=~s/([\.,!\?;]) –/$1\&#160;–/g;
+	  $XMLBody=~s/([\.,!\?;]) ${u{mdash}}/$1${u{nbsp}}${u{mdash}}/g;
 		print "step 12\n";
 	}
-#	$XMLBody=~s/–/—/g;
 
 
 	$BookLang=~s/\s+//;
