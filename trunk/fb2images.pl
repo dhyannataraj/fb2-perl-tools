@@ -2,9 +2,11 @@
 
 use strict;
 use XML::DOM;
-use Getopt::Long;
+use Getopt::Long qw(HelpMessage VersionMessage);
 use File::MMagic;
 use MIME::Base64 qw(encode_base64);
+use Encode;
+our $VERSION=0.01;
 
 =head1 NAME
 
@@ -45,11 +47,12 @@ Nikolay Shaplov <shaplov@sf.net>
 
 my $flags={};
 my $opts={};
-  GetOptions ("lits|l" => \$opts->{'list'},
+  GetOptions (help=>sub {HelpMessage(); },
+  				version=>sub {VersionMessage(); },
+              "list|l" => \$opts->{'list'},
               "add|a=s@"=> \$opts->{'add'},
 	      "remove|r=s@"=>\$opts->{'remove'}
-             );
-
+             ) or exit(1);
   $opts->{'list'}=1 if @ARGV && ! %{$opts};
   my $FileName= $ARGV[0];
  
@@ -71,13 +74,16 @@ my $opts={};
 
   if ($flags->{'changed'})
   {
-    open SRC,$FileName;
-    open DST,">$FileName~";
-    local($/) = undef;
-    print DST <SRC>;
-    close SRC;
-    close DST;
-    $doc->printToFile ($FileName);	 
+	my $backup = $FileName . "~";
+	unlink $backup;
+	rename $FileName, $backup or warn("Cannot make backup copy: $!");
+	my $encoding=$doc->getXMLDecl()->getEncoding();
+	# This call of Encode::decode fixes problem in XML::DOM which do not
+	# mark entire output utf8 correctly.
+	my $data = decode("utf8",$doc->toString);
+	open DST,">:encoding($encoding)",$FileName;
+    print DST $data;
+	close DST;
   }
 
   $doc->dispose; # Avoid memory leaks - cleanup circular references
