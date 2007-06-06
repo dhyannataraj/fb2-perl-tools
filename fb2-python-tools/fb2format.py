@@ -24,12 +24,13 @@ _binary_re = re.compile( '(<binary [^>]*>)([^<]*)(</binary>)', re.DOTALL )
 def _remove_eols( m ):
 	return m.group().replace( '\n', '' )
 
-def _binary_repl( m ):
-	data = m.group( 2 ).replace( ' ', '' )
-	base64.decodestring( data ) # validate
-	return m.group( 1 ) + data + m.group( 3 )
+def _binary_squeeze( m ):
+	return m.group( 1 ) + m.group( 2 ).replace( ' ', '' ) + m.group( 3 )
 
-def fb2format( data, squeeze = False, encoding = 'UTF-8' ):
+def _binary_recode( m ):
+	return m.group( 1 ) + base64.encodestring( base64.decodestring( m.group( 2 ) ) ) + m.group( 3 )
+
+def fb2format( data, encoding = 'UTF-8', squeeze = False, squeezeBinary = False ):
 	data = xml.dom.minidom.parseString( data ).toxml( 'UTF-8' )
 	data = _spaces_re.sub( ' ', data )
 	data = _end_tag_space_re.sub( '', data )
@@ -40,7 +41,10 @@ def fb2format( data, squeeze = False, encoding = 'UTF-8' ):
 	data = _eols_re.sub( '\n', data ).strip()
 
 	data = _oneline_re.sub( _remove_eols, data )
-	data = _binary_re.sub( _binary_repl, data )
+	if squeezeBinary:
+		data = _binary_re.sub( _binary_squeeze, data )
+	else:
+		data = _binary_re.sub( _binary_recode, data )
 
 	if squeeze:
 		data = data.replace( '\n', '' )
@@ -61,6 +65,7 @@ Options:
      -h              display this help message and exit
      -e <encoding>   output in the given encoding
      -s              sqeeze file in one line
+     -b              sqeeze binaries in one line
      -k              create backup files
      -@              read file names from STDIN (one name per line)
      -v              display progressbar
@@ -77,6 +82,7 @@ if __name__ == '__main__':
 
 	encoding = 'UTF-8'
 	squeeze = False
+	squeezeBinary = False
 	testOnly = False
 	keepBackup = False
 	backupSuffix = '.bak'
@@ -94,6 +100,8 @@ if __name__ == '__main__':
 			keepBackup = True
 		elif option == '-s':
 			squeeze = True
+		elif option == '-b':
+			squeezeBinary = True
 		elif option == '-t':
 			testOnly = True
 		elif option == '-v':
@@ -106,7 +114,7 @@ if __name__ == '__main__':
 	for filename in args:
 		try:
 			data0 = open( filename, 'r' ).read()
-			data = fb2format( data0, encoding = encoding, squeeze = squeeze )
+			data = fb2format( data0, encoding = encoding, squeeze = squeeze, squeezeBinary = squeezeBinary )
 			if data != data0:
 				print filename
 				open( filename + '.tmp', 'w' ).write( data )
