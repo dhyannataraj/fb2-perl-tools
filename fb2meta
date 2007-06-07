@@ -71,11 +71,11 @@ of this element is subset of FictionBook B<title-info> element.
 
 This option causes B<fb2meta> to output tab-separated listing which can
 be imported into spreadsheet or database. First line contains column
-headings. If book have several authors, They are comma-separated.
+headings. If book have several authors, they are comma-separated.
 
 =item B<-f>I<pattern>
 
-Uses prinf-like format to format output. See B<FORMAT STRING> below.
+Uses printf-like format to format output. See B<FORMAT STRING> below.
 
 =back
 
@@ -121,7 +121,7 @@ command can be used with minimal editing.
 
 Produce listing of files, which match given expression.
 By default, prints one filename per line. If B<-0> option is specified,
-file names are separated by '\0' symbol (suitable for B<xargs -0>)
+file names are separated by '\0' symbol (suitable for B<xargs -0>).
 
 Expression could contain condition on attributes, combined by AND and OR
 operators. For most attributes (except B<sequence.num> and B<date>) only
@@ -157,16 +157,16 @@ name of one which first mentioned in the file would be used.
 
 =item B<%a>
 
-Author name (first last)
+Author name (first last).
 
 
 =item B<%t>
 
-Translator name
+Translator name.
 
 =item B<%T>
 
-Title
+Title.
 
 =item B<%s>
 
@@ -185,11 +185,11 @@ zip-compressed and B<.fb2.gz> for gzip-compressed files.
 
 =item B<%l>
 
-Book language (language it would be read on)
+Book language (language it would be read on).
 
 =item B<%L>
 
-Book source language (language it was written on)
+Book source language (language it was written on).
 
 =item B<%d>
 
@@ -218,27 +218,27 @@ element, separated by space.  There can be several authors of one book.
 
 =item B<author.last-name>
 
-Last name of author
+Last name of author.
 
 =item B<author.first-name>
 
-First name of author
+First name of author.
 
 =item B<author.middle-name>
 
-Middle name of author
+Middle name of author.
 
 =item B<title>
 
-Value of B<book-title> element
+Value of B<book-title> element.
 
 =item B<sequence>
 
-Value of the B<name> attribute of B<sequence> element
+Value of the B<name> attribute of B<sequence> element.
 
 =item B<sequence.num>
 
-Value of B<num> attribute of B<sequence> element
+Value of B<num> attribute of B<sequence> element.
 
 =item B<genre>
 
