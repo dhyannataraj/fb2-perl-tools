@@ -289,7 +289,7 @@ use Data::Dumper;
 use Getopt::Std;
 use vars qw($opt_c $opt_t $opt_f);
 use XML::Writer;
-
+use Encode;
 #
 # XML parsing block
 #  
@@ -390,7 +390,7 @@ sub process {
   	print STDERR "$filename:$@\n";
 	return;
   }	
-  $metainfo{filename} = $filename;
+  $metainfo{filename} = decode($ENV{G_FILENAME_ENCODING},$filename);
   $metainfo{type} = $type;
   $output->();
 }
@@ -581,7 +581,7 @@ sub attrlist_output {
 	} else {
 		$attrlist{$metainfo{$attribute}}++;
 	}	
-	printf STDERR "\r%-78s",$metainfo{filename};
+	progress();
 }
 
 sub fix_format {
@@ -645,6 +645,10 @@ sub check_file {
 	} elsif ($magic eq "PK\03") {
 		close $f;
 		my $zip = new Archive::Zip($_);
+		if (!$zip) {
+			print STDERR "\r$_ is broken ZIP archive\n";
+			return;
+		}	
 		my ($member) = $zip->members();
 		$data=$zip->contents($member);;
 		return unless (substr($data,0,5) eq '<?xml'); 
@@ -667,10 +671,13 @@ sub check_file {
 #	return unless $head = $data =~m!^.*</document-info>!;
 #	print "$_ ($type):\n$head\n";
 }	
+sub progress {
+	our $count;
+	printf STDERR "\r%6d files processed",++$count;
+}	
 #
 # Scans tree of files using specified output procedure
 #
-
 sub scan_tree {
 	our $output = shift; 
 	find({no_chdir =>1, wanted=>\&check_file},$ARGV[0]||".");
