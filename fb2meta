@@ -287,7 +287,7 @@ use Compress::Zlib;
 use XML::Parser;
 use Data::Dumper;
 use Getopt::Std;
-use vars qw($opt_t $opt_f);
+use vars qw($opt_c $opt_t $opt_f);
 use XML::Writer;
 
 #
@@ -547,14 +547,71 @@ sub do_list {
 #  Accumulate author names in the hash instead of outputting 
 #
 our %attrlist;
+our $attribute;
 sub attrlist_output {
 	our $attribute;
-	if ($attribute eq 'author') {
-		foreach my $a (@{$metainfo{author}}) {
+	if ($attribute eq 'author' || $attribute eq 'translator') {
+		foreach my $a (@{$metainfo{$attribute}}) {
 			$attrlist{join("|",$a->{'last-name'},$a->{'first-name'},$a->{'middle-name'})}++;
 		}	
-	}
+	} elsif ($attribute eq 'book-title' || $attribute eq 'title') {
+		$attrlist{$metainfo{'Title'}}++;
+	} elsif ($attribute eq 'genre') {
+		foreach my $a (@{$metainfo{$attribute}}) {
+			$attrlist{$a}++;
+		}	
+	} elsif ($attribute eq 'sequence') {
+		foreach my $a (keys %{$metainfo{'sequence'}}) {
+			$attrlist{$a}++;
+		}
+	} elsif ($attribute eq 'sequence.num') {
+		foreach my $a (values %{$metainfo{'sequence'}}) {
+			$attrlist{$a} ++;
+		}
+	} elsif ($attribute =~ /(\w+)\.(\w+)/) {
+		foreach my $a (@{$metainfo{$1}}) {
+			$attrlist{$a->{$2}} ++;
+		}	
+	} else {
+		$attrlist{$metainfo{$attribute}}++;
+	}	
+	printf STDERR "%-78s\r",$metainfo{filename};
 }
+
+sub fix_format {
+	our $attribute;
+	my $key = shift;
+	my ($l,$f,$m);
+	if ($attribute eq 'author' || $attribute eq 'translator') {
+		($l,$f,$m) = split(/\|/,$key);
+		return "$f $m $l";
+	} else {
+		return $key;
+	}
+}	
+
+sub do_uniq {
+	getopts("c");
+	select STDERR;
+	$|=0;
+	select STDOUT;
+	our $attribute = shift @ARGV;
+	scan_tree(\&attrlist_output);
+	print STDERR "\r"," "x78,"\r\n";
+	if ($opt_c) {
+		foreach my $key (sort {$attrlist{$a} <=> $attrlist{$b}}
+		   keys(%attrlist)) {
+		   
+		   printf "%5d %s\n",$attrlist{$key},fix_format($key);
+		}   
+	} else {
+		foreach my $key (sort keys(%attrlist)) {
+			print fix_format($key),"\n";
+		}
+	}
+}	
+
+
 #
 # Accumulates new names made by specified format
 #
@@ -605,7 +662,7 @@ sub check_file {
 
 sub scan_tree {
 	our $output = shift; 
-	find({nochdir =>1, wanted=>\&check_file},$ARGV[0]||".");
+	find({no_chdir =>1, wanted=>\&check_file},$ARGV[0]||".");
 }
 
 
@@ -623,7 +680,7 @@ my %cmds=(
 'list'=>\&do_list,
 'find'=>\&TBD,
 'update'=>\&TBD,
-'uniq' => \&TBD,
+'uniq' => \&do_uniq,
 'rename'=>\&TBD,
 'fix'=>\&TBD,
 'help'=>\&HELP_MESSAGE
