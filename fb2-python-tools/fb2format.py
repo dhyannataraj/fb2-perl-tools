@@ -1,6 +1,23 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
+'''Usage:
+     fb2format.py [<options>] [<fb2-files>]
+Options:
+     -h              display this help message and exit
+     -V              display the version and exit
+     -e <encoding>   output in the given encoding
+     -s              sqeeze file in one line
+     -b              sqeeze binaries in one line
+     -k              create backup files
+     -@ <file>       read file names from file (one name per line)
+     -v              display progressbar
+File name '-' means standard input/output.
+'''
+
+__author__ = 'Serhiy Storchaka <storchaka@sourceforge.net>'
+__version__ = '0.1'
+
 try:
 	import psyco
 	psyco.full()
@@ -15,6 +32,8 @@ _eols_re = re.compile( r'\n\n|\n \n|\n | \n' )
 _end_tag_space_re = re.compile( ' (?=>)| (?=/>)' )
 _start_tag_re = re.compile( '(<[^/?][^>]*>)', re.DOTALL )
 _end_tag_re = re.compile( '(</[^>]*>|<[^/?][^>]*/>)', re.DOTALL )
+def make_tags_switch( tags ):
+	return re.compile( '(%s)' % '|'.join( '<%s(?: [^>]*)?>.*?</%s>' % (tag, tag) for tag in tags ), re.DOTALL )
 def _make_tags_switch( tags ):
 	return re.compile( '(%s)' % '|'.join( '<%s(?: [^>]*)?>.*?</%s>' % (tag, tag) for tag in tags ), re.DOTALL )
 _text_re = _make_tags_switch( ('p', 'v', 'subtitle', 'text-author') )
@@ -59,25 +78,12 @@ def fb2format( data, encoding = 'UTF-8', squeeze = False, squeezeBinary = False 
 	writer.close()
 	return data
 
-__doc__ = '''Usage:
-     fb2format.py [<options>] [<fb2-files>]
-Options:
-     -h              display this help message and exit
-     -e <encoding>   output in the given encoding
-     -s              sqeeze file in one line
-     -b              sqeeze binaries in one line
-     -k              create backup files
-     -@              read file names from STDIN (one name per line)
-     -v              display progressbar
-'''
-
 if __name__ == '__main__':
 	import getopt
 	try:
-		opts, args = getopt.getopt( sys.argv[1:], '@e:hkstv' )
-	except getopt.GetoptError:
-		# print help information and exit:
-		print >>sys.stderr, 'Illegal option'
+		opts, args = getopt.getopt( sys.argv[1:], '@:e:hkstvV' )
+	except getopt.GetoptError, err:
+		print >>sys.stderr, 'Error:', err
 		sys.exit( 2 )
 
 	encoding = 'UTF-8'
@@ -92,8 +98,14 @@ if __name__ == '__main__':
 		if option == '-h':
 			print __doc__
 			sys.exit( 0 )
+		elif option == '-V':
+			print __version__
+			sys.exit( 0 )
 		elif option == '-@':
-			args.extend( line.rstrip( '\n' ) for line in sys.stdin )
+			if value == '-':
+				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
+			else:
+				args.extend( line.rstrip( '\n' ) for line in open( value ) )
 		elif option == '-e':
 			encoding = value
 		elif option == '-k':
@@ -113,15 +125,22 @@ if __name__ == '__main__':
 
 	for filename in args:
 		try:
-			data0 = open( filename, 'r' ).read()
+			if filename == '-':
+				data0 = sys.stdin.read()
+			else:
+				data0 = open( filename, 'r' ).read()
 			data = fb2format( data0, encoding = encoding, squeeze = squeeze, squeezeBinary = squeezeBinary )
 			if data != data0:
 				print filename
-				open( filename + '.tmp', 'w' ).write( data )
-				if not testOnly:
-					if keepBackup:
-						os.rename( filename, filename + backupSuffix )
-					os.rename( filename + '.tmp', filename )
+				if filename == '-':
+					if not testOnly:
+						sys.stdout.write( data )
+				else:
+					open( filename + '.tmp', 'w' ).write( data )
+					if not testOnly:
+						if keepBackup:
+							os.rename( filename, filename + backupSuffix )
+						os.rename( filename + '.tmp', filename )
 		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception, err:
