@@ -383,7 +383,13 @@ sub process {
   End=>\&parse_end,
   Char =>\&parse_char,
   Init =>\&parse_init,});
+  eval {
   $parser->parse($header);
+  };
+  if ($@) {
+  	print STDERR "$filename:$@\n";
+	return;
+  }	
   $metainfo{filename} = $filename;
   $metainfo{type} = $type;
   $output->();
@@ -575,7 +581,7 @@ sub attrlist_output {
 	} else {
 		$attrlist{$metainfo{$attribute}}++;
 	}	
-	printf STDERR "%-78s\r",$metainfo{filename};
+	printf STDERR "\r%-78s",$metainfo{filename};
 }
 
 sub fix_format {
@@ -593,11 +599,11 @@ sub fix_format {
 sub do_uniq {
 	getopts("c");
 	select STDERR;
-	$|=0;
+	$|=1;
 	select STDOUT;
 	our $attribute = shift @ARGV;
 	scan_tree(\&attrlist_output);
-	print STDERR "\r"," "x78,"\r\n";
+	print STDERR "\r"," "x78,"\r";
 	if ($opt_c) {
 		foreach my $key (sort {$attrlist{$a} <=> $attrlist{$b}}
 		   keys(%attrlist)) {
@@ -634,11 +640,14 @@ sub check_file {
 		my $gz = gzopen($f,"r");
 		$gz->gzread($data,10000000);
 		close $f;
+		return unless (substr($data,0,5) eq '<?xml'); 
 		$type = "gzip"
 	} elsif ($magic eq "PK\03") {
+		close $f;
 		my $zip = new Archive::Zip($_);
 		my ($member) = $zip->members();
 		$data=$zip->contents($member);;
+		return unless (substr($data,0,5) eq '<?xml'); 
 		$type = "zip";
 	} elsif ($magic eq "<?x") {
 		$type = "fb2";
@@ -648,7 +657,9 @@ sub check_file {
 		seek $f,0,0;
 		read $f,$data,$size;
 		close $f;
-	}
+	} else {
+		return;
+	}	
 	my $i = index($data,"</description>");
 	if ($i) {
 	 process($File::Find::name,$type,substr($data,0,$i+length("</description>"))."</FictionBook>");
