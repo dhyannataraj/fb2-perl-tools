@@ -287,6 +287,7 @@ use Compress::Zlib;
 use XML::Parser;
 use Data::Dumper;
 use Getopt::Std;
+use I18N::Langinfo qw(langinfo CODESET);
 use vars qw($opt_c $opt_t $opt_f);
 use XML::Writer;
 use Encode;
@@ -379,6 +380,7 @@ our $output;
 
 sub process {
   my ($filename,$type,$header) = @_;
+  our $filenameencoding;
   my $parser = XML::Parser->new(Handlers=> {Start =>\&parse_start,
   End=>\&parse_end,
   Char =>\&parse_char,
@@ -390,7 +392,7 @@ sub process {
   	print STDERR "$filename:$@\n";
 	return;
   }	
-  $metainfo{filename} = decode($ENV{G_FILENAME_ENCODING},$filename);
+  $metainfo{filename} = decode($filenameencoding,$filename);
   $metainfo{type} = $type;
   $output->();
 }
@@ -530,6 +532,7 @@ sub formatted_output {
 	print format_string();
 }	
 sub do_list {
+	our $encoding;
 	getopts("tf:");
 	if ($opt_t) {
 		print
@@ -542,7 +545,7 @@ sub do_list {
 	} else {
 		our $xmlwriter = new XML::Writer(OUTPUT=> \*STDOUT,DATA_MODE=>1,
 		DATA_INDENT=>2);
-		$xmlwriter->xmlDecl("UTF-8");
+		$xmlwriter->xmlDecl($encoding);
 		$xmlwriter->startTag("Library");
 		scan_tree( \&xml_output);
 		$xmlwriter->endTag();		
@@ -706,6 +709,8 @@ my %cmds=(
 
 use open ":std";
 use open ":locale";
+our $encoding = lc(langinfo(CODESET));
+our $filenameencoding = $ENV{G_FILENAME_ENCODING}||$encoding;
 
 $output = \&tabsep_output;
 
