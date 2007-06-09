@@ -317,8 +317,8 @@ sub parse_start {
 		$ref = \$metainfo{'Title'}
 	}
 	if ($context eq "/FictionBook/description/title-info/genre") {
-	 push @{$metainfo{"Genre"}},"";
-	 $ref= \$metainfo{"Genre"}[$#{$metainfo{"Genre"}}];
+	 push @{$metainfo{"genre"}},"";
+	 $ref= \$metainfo{"genre"}[$#{$metainfo{"genre"}}];
 	} 
 	if ($context eq "/FictionBook/description/title-info/sequence") {
 	 $metainfo{sequence}={$attrs{"name"},$attrs{"number"}};
@@ -411,7 +411,7 @@ sub tabsep_output {
 	join(", ",	
 	  map($_->{'first-name'}." ".$_->{'middle-name'}." ".$_->{'last-name'},
 	  	@{$metainfo{'author'}})),"\t",
-	  $metainfo{'Title'},"\t",join(", ",@{$metainfo{Genre}}),
+	  $metainfo{'Title'},"\t",join(", ",@{$metainfo{genre}}),
 	  "\t",$metainfo{'date'},"\t",$metainfo{'lang'},"\t",$metainfo{'src-lang'},"\t",($metainfo{sequence}?join("\t",%{$metainfo{sequence}}):""),"\n";
 
 }	
@@ -444,7 +444,7 @@ sub xml_output {
 	simple_element($xmlwriter,"date",$metainfo{'date'});
 	simple_element($xmlwriter,"lang",$metainfo{'lang'});
 	simple_element($xmlwriter,"src-lang",$metainfo{'src-lang'});
-	foreach my $g (@{$metainfo{Genre}}) {
+	foreach my $g (@{$metainfo{genre}}) {
 		simple_element($xmlwriter,"genre",$g);
 	}
 	if (defined $metainfo{sequence}) {
