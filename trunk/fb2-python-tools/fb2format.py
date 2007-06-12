@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-'''Usage:
+'''\
+Usage:
      fb2format.py [<options>] [<fb2-files>]
 Options:
      -h              display this help message and exit
@@ -23,9 +24,9 @@ try:
 	psyco.full()
 except:
 	pass
-import sys, xml.dom.minidom, re, base64
-import os, os.path, getopt
-import cStringIO, codecs
+
+import re, base64
+import sys, getopt, os, os.path, xml.dom.minidom, codecs, cStringIO
 
 _spaces_re = re.compile( r'[ \t\r\n]{2,}|[\t\r\n]' )
 _eols_re = re.compile( r'\n\n|\n \n|\n | \n' )
@@ -49,8 +50,7 @@ def _binary_squeeze( m ):
 def _binary_recode( m ):
 	return m.group( 1 ) + base64.encodestring( base64.decodestring( m.group( 2 ) ) ) + m.group( 3 )
 
-def fb2format( data, encoding = 'UTF-8', squeeze = False, squeezeBinary = False ):
-	data = xml.dom.minidom.parseString( data ).toxml( 'UTF-8' )
+def fb2format( data, squeeze = False, squeezeBinary = False ):
 	data = _spaces_re.sub( ' ', data )
 	data = _end_tag_space_re.sub( '', data )
 
@@ -70,26 +70,19 @@ def fb2format( data, encoding = 'UTF-8', squeeze = False, squeezeBinary = False 
 	else:
 		data = data.replace( '>\n<title>', '><title>' )
 
-# 	data = xml.dom.minidom.parseString( data ).toxml( encoding )
-	writer = cStringIO.StringIO()
-	writer = codecs.lookup( encoding )[3]( writer,  'xmlcharrefreplace' )
-	xml.dom.minidom.parseString( data ).writexml( writer, encoding = encoding )
-	data = writer.getvalue()
-	writer.close()
 	return data
 
+
 if __name__ == '__main__':
-	import getopt
 	try:
 		opts, args = getopt.getopt( sys.argv[1:], '@:e:hkstvV' )
 	except getopt.GetoptError, err:
 		print >>sys.stderr, 'Error:', err
 		sys.exit( 2 )
 
-	encoding = 'UTF-8'
+	forceEncoding = None
 	squeeze = False
 	squeezeBinary = False
-	testOnly = False
 	keepBackup = False
 	backupSuffix = '.bak'
 	verbose = False
@@ -107,15 +100,13 @@ if __name__ == '__main__':
 			else:
 				args.extend( line.rstrip( '\n' ) for line in open( value ) )
 		elif option == '-e':
-			encoding = value
+			forceEncoding = value
 		elif option == '-k':
 			keepBackup = True
 		elif option == '-s':
 			squeeze = True
 		elif option == '-b':
 			squeezeBinary = True
-		elif option == '-t':
-			testOnly = True
 		elif option == '-v':
 			verbose = True
 
@@ -129,18 +120,28 @@ if __name__ == '__main__':
 				data0 = sys.stdin.read()
 			else:
 				data0 = open( filename, 'r' ).read()
-			data = fb2format( data0, encoding = encoding, squeeze = squeeze, squeezeBinary = squeezeBinary )
-			if data != data0:
-				print filename
-				if filename == '-':
-					if not testOnly:
-						sys.stdout.write( data )
-				else:
+
+			doc = xml.dom.minidom.parseString( data0 )
+			encoding = forceEncoding or doc.encoding or 'UTF-8'
+			data = doc.toxml( 'UTF-8' )
+			data = fb2format( data, squeeze = squeeze, squeezeBinary = squeezeBinary )
+			doc = xml.dom.minidom.parseString( data )
+
+			if filename == '-':
+				writer = codecs.getwriter( encoding )( sys.stdout,  'xmlcharrefreplace' )
+				doc.writexml( writer, encoding = encoding )
+				writer.close()
+			else:
+				writer = cStringIO.StringIO()
+				writer = codecs.getwriter( encoding )( writer,  'xmlcharrefreplace' )
+				doc.writexml( writer, encoding = encoding )
+				data = writer.getvalue()
+				writer.close()
+				if data != data0:
 					open( filename + '.tmp', 'w' ).write( data )
-					if not testOnly:
-						if keepBackup:
-							os.rename( filename, filename + backupSuffix )
-						os.rename( filename + '.tmp', filename )
+					if keepBackup:
+						os.rename( filename, filename + backupSuffix )
+					os.rename( filename + '.tmp', filename )
 		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception, err:
