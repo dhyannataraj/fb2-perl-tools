@@ -491,6 +491,7 @@ sub tellico_output {
 		$xmlwriter->endTag();
 	}
 	simple_element($xmlwriter,'language',$metainfo{'lang'});
+	simple_element($xmlwriter,'orig_language',$metainfo{'src-lang'});
 	$xmlwriter->startTag('genres') ;
 	foreach my $g (@{$metainfo{genre}}) {
 		simple_element($xmlwriter,'genre',$g);
@@ -635,6 +636,7 @@ sub do_export_tellico {
 	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'LCCN#', 'category'=>'Publishing', 'format'=>'4', 'type'=>'1', 'name'=>'lccn', 'description'=>'Library of Congress Control Number');
 	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Pages', 'category'=>'Publishing', 'format'=>'4', 'type'=>'6', 'name'=>'pages');
 	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Language', 'category'=>'Publishing', 'format'=>'4', 'type'=>'1', 'name'=>'language');
+	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Original Language', 'category'=>'Publishing', 'format'=>'4', 'type'=>'1', 'name'=>'orig_language');
 	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Genre', 'category'=>'Classification', 'format'=>'4', 'type'=>'1', 'name'=>'genre');
 	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Keywords', 'category'=>'Classification', 'format'=>'4', 'type'=>'1', 'name'=>'keyword');
 	$xmlwriter->emptyTag('field','flags'=>'6', 'title'=>'Series', 'category'=>'Classification', 'format'=>'4', 'type'=>'1', 'name'=>'series');
