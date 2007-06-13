@@ -93,6 +93,8 @@ Supported formats:
 
 Export to Tellico book collection.
 
+Tellico is a collection manager for KDE (http://www.periapsis.org/tellico/).
+
 =back
 
 =item B<uniq>
