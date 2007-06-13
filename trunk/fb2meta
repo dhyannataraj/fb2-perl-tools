@@ -300,7 +300,7 @@ Victor Wagner <vitus@wagner.pp.ru>
 =cut
 
 use File::Find;
-use Archive::Zip;
+use Archive::Zip qw(:ERROR_CODES :CONSTANTS);
 use Compress::Zlib;
 use XML::Parser;
 use Data::Dumper;
@@ -742,13 +742,19 @@ sub check_file {
 	open $f,"<",$_;
 	binmode $f,":bytes";
 	read $f,$magic,3;
-	my ($data,$type,$head);
+	my ($data,$type,$i);
 	if ($magic eq "\x1f\x8b\x08") {
 		seek $f,0,0;
 		my $gz = gzopen($f,"r");
-		$gz->gzread($data,10000000);
+		$gz->gzread($data);
+		return unless (substr($data,0,5) eq '<?xml'); 
+		return unless (index($data,"<FictionBook")!=-1);
+		while (($i = index($data,"</description>"))==-1) {
+			my $d2;
+			return if $gz->gzread($d2)<=0;
+			$data .= $d2;
+		}	
 		close $f;
-		return unless (substr($data,0,5) eq '<?xml');
 		$type = "gzip"
 	} elsif ($magic eq "PK\03") {
 		close $f;
@@ -758,21 +764,42 @@ sub check_file {
 			return;
 		}
 		my ($member) = $zip->members();
-		$data=$zip->contents($member);;
-		return unless (substr($data,0,5) eq '<?xml');
+		$member->desiredCompressionMethod(COMPRESSION_STORED);
+		$member->rewindData();
+		my ($bytes,$status) = eval {$member->readChunk(4096);};
+        unless (defined($bytes) && ($status == AZ_OK || $status == AZ_STREAM_END)) {
+			print STDERR "\r$_ is broken: $@\n"; 
+			$member->endRead();return;
+		}	
+		$data = $$bytes;
+		unless (substr($data,0,5) eq '<?xml' &&
+		   index($data,"<FictionBook")!=-1) {
+		   $member->endRead();
+		   return;
+		}   
+		while (($i = index ($data,"</description>"))==-1) {
+			if ($status == AZ_STREAM_END) {
+				$member->endRead();
+				return;
+			}	
+			($bytes,$status) = $member->readChunk(4096);
+			if ($status != AZ_OK && $status != AZ_STREAM_END) {
+				$member->endRead(); return;
+			}	
+			$data .= $$bytes;
+		}	
+		$member->endRead();
 		$type = "zip";
 	} elsif ($magic eq "<?x") {
 		$type = "fb2";
 		$data = $magic;
-		seek $f,0,2;
-		my $size = tell $f;
-		seek $f,0,0;
-		read $f,$data,$size;
+		while ( ($i = index($data,"</description>"))==-1)  {
+			return unless read($f,$data,4096,length($data));
+		}	
 		close $f;
 	} else {
 		return;
 	}
-	my $i = index($data,"</description>");
 	if ($i) {
 	 process($File::Find::name,$type,substr($data,0,$i+length("</description>"))."</FictionBook>");
 	}
