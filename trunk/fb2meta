@@ -11,11 +11,13 @@ fb2meta - manipulate meta information of FictionBook files collection
 
 B<fb2meta> B<list> [B<-t>|B<-f>I<pattern>] [I<directory>]
 
+B<fb2meta> B<export> I<format> [I<directory>]
+
 B<fb2meta> B<uniq> [-c] I<attribute> [I<directory>]
 
 B<fb2meta> B<rename> [B<-z>] I<pattern>   [I<directrory>]
 
-B<fb2meta> B<update> [B<-s>] I<attribute>=I<value>  I<files...> 
+B<fb2meta> B<update> [B<-s>] I<attribute>=I<value>  I<files...>
 
 B<fb2meta> B<fix> I<attribute> I<filename> [I<directory>]
 
@@ -32,7 +34,7 @@ sub HELP_MESSAGE {
   "fb2meta update [-s] attribute=value [-s attribute=value...] files..\n",
   "fb2meta fix attribute substtable [directory]\n";
   exit(1);
-}  
+}
 
 
 
@@ -42,11 +44,11 @@ B<fb2meta> operates on metainformation of the collection of FictionBook
 files. It is able to operate on uncompressed, zip-compressed and
 gzip-compressed files.
 
-By default it outputs listing of all supported files in XML format. 
+By default it outputs listing of all supported files in XML format.
 
 If directory is not specified, current one is used. For update command,
 which expect list of files, rather than directory, omitting file names
-produces an error.  
+produces an error.
 
 =head1 COMMANDS
 
@@ -67,7 +69,7 @@ attributes B<href> which contain relative path to file and
 optional B<compression>, which can have value B<zip> or B<gzip>. Content
 of this element is subset of FictionBook B<title-info> element.
 
-=item B<-t> 
+=item B<-t>
 
 This option causes B<fb2meta> to output tab-separated listing which can
 be imported into spreadsheet or database. First line contains column
@@ -76,6 +78,20 @@ headings. If book have several authors, they are comma-separated.
 =item B<-f>I<pattern>
 
 Uses printf-like format to format output. See B<FORMAT STRING> below.
+
+=back
+
+=item B<export>
+
+Export books metadate to external collection.
+
+Supported formats:
+
+=over 8
+
+=item B<tellico>
+
+Export to Tellico book collection.
 
 =back
 
@@ -105,9 +121,9 @@ Values for all attributes are treated literally. For B<sequence.num>
 attribute special value B<#> is supported, which is expanded to
 sequentual number of the processed file. So, you can use command
 
-  fb2meta update -s sequence="Some cool serial" -s sequence.num=# file1 file2 file3 
- 
-and file1 would be number 1 in this sequence, file2 - number2 etc. 
+  fb2meta update -s sequence="Some cool serial" -s sequence.num=# file1 file2 file3
+
+and file1 would be number 1 in this sequence, file2 - number2 etc.
 
 =item B<fix>
 
@@ -147,7 +163,7 @@ with empty middle name.
 =over 4
 
 =item B<%f>
-	
+
 Original file name
 
 =item B<%A>
@@ -172,11 +188,11 @@ Title.
 
 Sequence name. If book belongs to no sequence, and you use sequence name
 as path component (say %a/%s/%T.%x), book would be put on the upper
-level along with subdirectories of the sequences. 
+level along with subdirectories of the sequences.
 
 =item B<%n>
 
-Number in the sequence. 
+Number in the sequence.
 
 =item B<%x>
 
@@ -270,10 +286,10 @@ range of years.
 
 =head1 BUGS
 
-Output always goes to STDOUT in the current locale encoding, although 
+Output always goes to STDOUT in the current locale encoding, although
 XML declaration for XML listing says UTF-8.
 
-Some ptions are not implemented yet. 
+Some options are not implemented yet.
 
 =head1 AUTHOR
 
@@ -293,13 +309,13 @@ use XML::Writer;
 use Encode;
 #
 # XML parsing block
-#  
+#
 our($context,$ref,$aref);
 our %metainfo;
 
 #
 # Clear parsed data from previous file
-# 
+#
 sub parse_init {
    our $context = "";
    our %metainfo = ();
@@ -319,16 +335,16 @@ sub parse_start {
 	if ($context eq "/FictionBook/description/title-info/genre") {
 	 push @{$metainfo{"genre"}},"";
 	 $ref= \$metainfo{"genre"}[$#{$metainfo{"genre"}}];
-	} 
+	}
 	if ($context eq "/FictionBook/description/title-info/sequence") {
 	 $metainfo{sequence}={$attrs{"name"},$attrs{"number"}};
-	} 
+	}
 	if ($context eq "/FictionBook/description/title-info/date"||
 	    $context eq "/FictionBook/description/title-info/lang"||
 		$context eq "/FictionBook/description/title-info/src-lang") {
 		$metainfo{$element} = "";
 		$ref =\$metainfo{$element};
-	}	
+	}
 	if ($context eq "/FictionBook/description/title-info/author") {
 		$aref = {};
 		push @{$metainfo{author}},$aref;
@@ -336,7 +352,7 @@ sub parse_start {
 	if ($context =~ m!/FictionBook/description/title-info/author/.*!) {
 		$aref->{$element} = "";
 		$ref = \$aref->{$element};
-	}	
+	}
 	if ($context eq "/FictionBook/description/title-info/translator") {
 		$aref = {};
 		push @{$metainfo{translator}},$aref;
@@ -344,19 +360,19 @@ sub parse_start {
 	if ($context =~ m!/FictionBook/description/title-info/translator/.*!) {
 		$aref->{$element} = "";
 		$ref = \$aref->{$element};
-	}	
-		
+	}
+
 }
 #
 # Parse characer data. If $ref is defined, store them there, otherwise
-# just ignore 
+# just ignore
 #
 sub parse_char {
     my ($handle,$string) = @_;
 	$string =~ s/\s+/ /g;
 	if ($ref) {
 		$$ref .=$string;
-	}	
+	}
 }
 #
 # Process end of element - remove last element from path and undefine
@@ -372,10 +388,10 @@ sub parse_end {
 # in the %metainfo
 #
 our $output;
-# 
+#
 # Process read file header - parse XML, fill %metainfo,
-# add filename and compression type there, and than call whatever 
-# is referenced by $output 
+# add filename and compression type there, and than call whatever
+# is referenced by $output
 #
 
 sub process {
@@ -391,7 +407,7 @@ sub process {
   if ($@) {
   	print STDERR "$filename:$@\n";
 	return;
-  }	
+  }
   $metainfo{filename} = decode($filenameencoding,$filename);
   $metainfo{type} = $type;
   $output->();
@@ -408,13 +424,13 @@ sub debug_output {
 
 sub tabsep_output {
 	print $metainfo{'filename'},"\t",$metainfo{'type'},"\t",
-	join(", ",	
+	join(", ",
 	  map($_->{'first-name'}." ".$_->{'middle-name'}." ".$_->{'last-name'},
 	  	@{$metainfo{'author'}})),"\t",
 	  $metainfo{'Title'},"\t",join(", ",@{$metainfo{genre}}),
 	  "\t",$metainfo{'date'},"\t",$metainfo{'lang'},"\t",$metainfo{'src-lang'},"\t",($metainfo{sequence}?join("\t",%{$metainfo{sequence}}):""),"\n";
 
-}	
+}
 #
 # Output xml element
 #
@@ -423,7 +439,7 @@ sub simple_element {
 	$writer->startTag($element);
 	$writer->characters($content);
 	$writer->endTag;
-}	
+}
 our $xmlwriter;
 
 sub xml_output {
@@ -437,7 +453,7 @@ sub xml_output {
 				if (exists $a->{$name}) {
 					simple_element($xmlwriter,$name,$a->{$name});
 				}
-			}	
+			}
 			$xmlwriter->endTag();
 		}
 	}
@@ -450,10 +466,43 @@ sub xml_output {
 	if (defined $metainfo{sequence}) {
 		my ($seqname,$num) = %{$metainfo{sequence}};
 		$xmlwriter->emptyTag("sequence","name"=>$seqname,(defined
-		$num?("number"=>$num):()));	
+		$num?("number"=>$num):()));
 	}
 	$xmlwriter->endTag();
-}	
+}
+
+sub tellico_output {
+	$xmlwriter->startTag('entry');
+	simple_element($xmlwriter,'title',$metainfo{'Title'});
+	foreach my $person ('author','translator') {
+		$xmlwriter->startTag(${person}.'s') ;
+		foreach my $a (@{$metainfo{$person}}) {
+			my $s = $a->{'last-name'};
+			if (exists $a->{'first-name'}) {
+				$s .= ', '.$a->{'first-name'};
+				if (exists $a->{'middle-name'}) {
+					$s .= ' '.$a->{'middle-name'};
+				}
+			}
+			simple_element($xmlwriter,$person,$s);
+		}
+		$xmlwriter->endTag();
+	}
+	simple_element($xmlwriter,'language',$metainfo{'lang'});
+	$xmlwriter->startTag('genres') ;
+	foreach my $g (@{$metainfo{genre}}) {
+		simple_element($xmlwriter,'genre',$g);
+	}
+	$xmlwriter->endTag();
+	if (defined $metainfo{sequence}) {
+		my ($seqname,$num) = %{$metainfo{sequence}};
+		simple_element($xmlwriter,'series',$seqname);
+		if (defined $num) {
+			simple_element($xmlwriter,'series_num',$num);
+		}
+	}
+	$xmlwriter->endTag();
+}
 
 sub check_pattern {
 	my $specifier = shift;
@@ -461,22 +510,22 @@ sub check_pattern {
 		die ("Invalid format specifier \%$specifier\n");
 	};
 	return "\%$specifier";
-}	
+}
 
 sub interpret_pattern {
 	our %metainfo;
 	my $specifier = shift;
 	if ($specifier eq 'A') {
-		return join(", ",	
+		return join(", ",
 	  map($_->{'first-name'}." ".$_->{'middle-name'}." ".$_->{'last-name'},
 	  	@{$metainfo{'author'}}))
 
 	} elsif ($specifier eq 'a') {
-		return join(", ",	
+		return join(", ",
 	  map($_->{'first-name'}." ".$_->{'last-name'},
 	  	@{$metainfo{'translator'}}))
 	} elsif ($specifier eq 't') {
-		return join(", ",	
+		return join(", ",
 	  map($_->{'first-name'}." ".$_->{'middle-name'}." ".$_->{'last-name'},
 	  	@{$metainfo{'translator'}}))
 	} elsif ($specifier eq 'T') {
@@ -501,7 +550,7 @@ sub interpret_pattern {
 		return $metainfo{'filename'};
  	} elsif ($specifier eq '%') {
 		return '%';
-	}	
+	}
 }
 
 sub bs_escape {
@@ -512,13 +561,13 @@ sub bs_escape {
   } else {
   	return $sym;
   }
-}	
+}
 
 sub set_pattern {
 	my $pat = shift;
-	$pat =~ s/%(.)/check_pattern($1)/ge;	
+	$pat =~ s/%(.)/check_pattern($1)/ge;
 	$pat =~ s/\\(.)/bs_escape($1)/ge;
-	our $pattern = $pat;	
+	our $pattern = $pat;
 }
 
 sub format_string {
@@ -530,7 +579,7 @@ sub format_string {
 
 sub formatted_output {
 	print format_string();
-}	
+}
 sub do_list {
 	our $encoding;
 	getopts("tf:");
@@ -548,12 +597,66 @@ sub do_list {
 		$xmlwriter->xmlDecl($encoding);
 		$xmlwriter->startTag("Library");
 		scan_tree( \&xml_output);
-		$xmlwriter->endTag();		
+		$xmlwriter->endTag();
 		$xmlwriter->end();
 	}
-}	
+}
+
+sub do_export {
+	our $format = shift @ARGV;
+	if ($format=='tellico') {
+		do_export_tellico()
+	} else {
+		die ("Invalid format $format\n");
+	}
+}
+
+sub do_export_tellico {
+	our $encoding;
+	our $xmlwriter = new XML::Writer(OUTPUT=> \*STDOUT,DATA_MODE=>1, DATA_INDENT=>2);
+	$xmlwriter->xmlDecl($encoding);
+	$xmlwriter->startTag('tellico', 'xmlns'=>'http://periapsis.org/tellico/', 'syntaxVersion'=>'9');
+	$xmlwriter->startTag('collection', 'title'=>'My Fiction Books', 'type'=>'2');
+	$xmlwriter->startTag('fields');
+	$xmlwriter->emptyTag('field','flags'=>'8', 'title'=>'Title', 'category'=>'General', 'format'=>'1', 'type'=>'1', 'name'=>'title');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Subtitle', 'category'=>'General', 'format'=>'1', 'type'=>'1', 'name'=>'subtitle');
+	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Author', 'category'=>'General', 'format'=>'2', 'type'=>'1', 'name'=>'author');
+	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Translator', 'category'=>'General', 'format'=>'2', 'type'=>'1', 'name'=>'translator');
+	$xmlwriter->emptyTag('field','flags'=>'2', 'title'=>'Binding', 'category'=>'General', 'allowed'=>'Hardback;Paperback;Trade Paperback;E-Book;Magazine;Journal', 'format'=>'4', 'type'=>'3', 'name'=>'binding');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Purchase Date', 'category'=>'General', 'format'=>'3', 'type'=>'1', 'name'=>'pur_date');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Purchase Price', 'category'=>'General', 'format'=>'4', 'type'=>'1', 'name'=>'pur_price');
+	$xmlwriter->emptyTag('field','flags'=>'6', 'title'=>'Publisher', 'category'=>'Publishing', 'format'=>'0', 'type'=>'1', 'name'=>'publisher');
+	$xmlwriter->emptyTag('field','flags'=>'4', 'title'=>'Edition', 'category'=>'Publishing', 'format'=>'0', 'type'=>'1', 'name'=>'edition');
+	$xmlwriter->emptyTag('field','flags'=>'3', 'title'=>'Copyright Year', 'category'=>'Publishing', 'format'=>'4', 'type'=>'6', 'name'=>'cr_year');
+	$xmlwriter->emptyTag('field','flags'=>'2', 'title'=>'Publication Year', 'category'=>'Publishing', 'format'=>'4', 'type'=>'6', 'name'=>'pub_year');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'ISBN#', 'category'=>'Publishing', 'format'=>'4', 'type'=>'1', 'name'=>'isbn', 'description'=>'International Standard Book Number');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'LCCN#', 'category'=>'Publishing', 'format'=>'4', 'type'=>'1', 'name'=>'lccn', 'description'=>'Library of Congress Control Number');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Pages', 'category'=>'Publishing', 'format'=>'4', 'type'=>'6', 'name'=>'pages');
+	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Language', 'category'=>'Publishing', 'format'=>'4', 'type'=>'1', 'name'=>'language');
+	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Genre', 'category'=>'Classification', 'format'=>'4', 'type'=>'1', 'name'=>'genre');
+	$xmlwriter->emptyTag('field','flags'=>'7', 'title'=>'Keywords', 'category'=>'Classification', 'format'=>'4', 'type'=>'1', 'name'=>'keyword');
+	$xmlwriter->emptyTag('field','flags'=>'6', 'title'=>'Series', 'category'=>'Classification', 'format'=>'4', 'type'=>'1', 'name'=>'series');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Series Number', 'category'=>'Classification', 'format'=>'4', 'type'=>'6', 'name'=>'series_num');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Condition', 'category'=>'Classification', 'allowed'=>'New;Used', 'format'=>'4', 'type'=>'3', 'name'=>'condition');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Signed', 'category'=>'Personal', 'format'=>'4', 'type'=>'4', 'name'=>'signed');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Read', 'category'=>'Personal', 'format'=>'4', 'type'=>'4', 'name'=>'read');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Gift', 'category'=>'Personal', 'format'=>'4', 'type'=>'4', 'name'=>'gift');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Loaned', 'category'=>'Personal', 'format'=>'4', 'type'=>'4', 'name'=>'loaned');
+	$xmlwriter->startTag('field','flags'=>'2', 'title'=>'Rating', 'category'=>'Personal', 'format'=>'4', 'type'=>'14', 'name'=>'rating');
+	$xmlwriter->startTag('prop', 'name'=>'maximum'); $xmlwriter->characters('5'); $xmlwriter->endTag();
+	$xmlwriter->startTag('prop', 'name'=>'minimum'); $xmlwriter->characters('1'); $xmlwriter->endTag();
+	$xmlwriter->endTag();
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Front Cover', 'category'=>'Front Cover', 'format'=>'4', 'type'=>'10', 'name'=>'cover');
+	$xmlwriter->emptyTag('field','flags'=>'0', 'title'=>'Comments', 'category'=>'Comments', 'format'=>'4', 'type'=>'2', 'name'=>'comments');
+	$xmlwriter->endTag();
+	scan_tree( \&tellico_output);
+	$xmlwriter->endTag();
+	$xmlwriter->endTag();
+	$xmlwriter->end();
+}
+
 #
-#  Accumulate author names in the hash instead of outputting 
+#  Accumulate author names in the hash instead of outputting
 #
 our %attrlist;
 our $attribute;
@@ -562,13 +665,13 @@ sub attrlist_output {
 	if ($attribute eq 'author' || $attribute eq 'translator') {
 		foreach my $a (@{$metainfo{$attribute}}) {
 			$attrlist{join("|",$a->{'last-name'},$a->{'first-name'},$a->{'middle-name'})}++;
-		}	
+		}
 	} elsif ($attribute eq 'book-title' || $attribute eq 'title') {
 		$attrlist{$metainfo{'Title'}}++;
 	} elsif ($attribute eq 'genre') {
 		foreach my $a (@{$metainfo{$attribute}}) {
 			$attrlist{$a}++;
-		}	
+		}
 	} elsif ($attribute eq 'sequence') {
 		foreach my $a (keys %{$metainfo{'sequence'}}) {
 			$attrlist{$a}++;
@@ -580,10 +683,10 @@ sub attrlist_output {
 	} elsif ($attribute =~ /(\w+)\.(\w+)/) {
 		foreach my $a (@{$metainfo{$1}}) {
 			$attrlist{$a->{$2}} ++;
-		}	
+		}
 	} else {
 		$attrlist{$metainfo{$attribute}}++;
-	}	
+	}
 	progress();
 }
 
@@ -597,7 +700,7 @@ sub fix_format {
 	} else {
 		return $key;
 	}
-}	
+}
 
 sub do_uniq {
 	getopts("c");
@@ -610,15 +713,15 @@ sub do_uniq {
 	if ($opt_c) {
 		foreach my $key (sort {$attrlist{$a} <=> $attrlist{$b}}
 		   keys(%attrlist)) {
-		   
+
 		   printf "%5d %s\n",$attrlist{$key},fix_format($key);
-		}   
+		}
 	} else {
 		foreach my $key (sort keys(%attrlist)) {
 			print fix_format($key),"\n";
 		}
 	}
-}	
+}
 
 
 #
@@ -643,7 +746,7 @@ sub check_file {
 		my $gz = gzopen($f,"r");
 		$gz->gzread($data,10000000);
 		close $f;
-		return unless (substr($data,0,5) eq '<?xml'); 
+		return unless (substr($data,0,5) eq '<?xml');
 		$type = "gzip"
 	} elsif ($magic eq "PK\03") {
 		close $f;
@@ -651,10 +754,10 @@ sub check_file {
 		if (!$zip) {
 			print STDERR "\r$_ is broken ZIP archive\n";
 			return;
-		}	
+		}
 		my ($member) = $zip->members();
 		$data=$zip->contents($member);;
-		return unless (substr($data,0,5) eq '<?xml'); 
+		return unless (substr($data,0,5) eq '<?xml');
 		$type = "zip";
 	} elsif ($magic eq "<?x") {
 		$type = "fb2";
@@ -666,23 +769,23 @@ sub check_file {
 		close $f;
 	} else {
 		return;
-	}	
+	}
 	my $i = index($data,"</description>");
 	if ($i) {
 	 process($File::Find::name,$type,substr($data,0,$i+length("</description>"))."</FictionBook>");
 	}
 #	return unless $head = $data =~m!^.*</document-info>!;
 #	print "$_ ($type):\n$head\n";
-}	
+}
 sub progress {
 	our $count;
 	printf STDERR "\r%6d files processed",++$count;
-}	
+}
 #
 # Scans tree of files using specified output procedure
 #
 sub scan_tree {
-	our $output = shift; 
+	our $output = shift;
 	find({no_chdir =>1, wanted=>\&check_file},$ARGV[0]||".");
 }
 
@@ -699,6 +802,7 @@ sub TBD {
 
 my %cmds=(
 'list'=>\&do_list,
+'export'=>\&do_export,
 'find'=>\&TBD,
 'update'=>\&TBD,
 'uniq' => \&do_uniq,
@@ -721,6 +825,6 @@ if (!@ARGV) {
 	if (!exists $cmds{$command}) {
 		print STDERR "Unknown command $command\n";
 		HELP_MESSAGE();
-	}	
+	}
 	$cmds{$command}();
-}	
+}
