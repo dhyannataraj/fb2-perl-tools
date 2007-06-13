@@ -321,7 +321,6 @@ def update_trdict( word ):
 		reserved_tr.add( word )
 
 def read_trdict( fname ):
-	try
 	for word in readlist( open( fname ) ):
 		update_trdict( word )
 		tword = word[0].upper() + word[1:]
