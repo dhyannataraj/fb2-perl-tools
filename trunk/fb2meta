@@ -321,6 +321,7 @@ use I18N::Langinfo qw(langinfo CODESET);
 use vars qw($opt_c $opt_t $opt_f);
 use XML::Writer;
 use Encode;
+use Locale::Language;
 #
 # XML parsing block
 #
@@ -485,23 +486,9 @@ sub xml_output {
 	$xmlwriter->endTag();
 }
 
-sub read_langs {
-	our %languages;
-	# /usr/share/misc/languages.gz
-	open (INPUT, 'languages') || die "can’t open languages: $!";
-	while (<INPUT>) {
-		chomp;
-		next if /^#/;
-		next unless /(.*?):([^;]*).*/;
-		$languages{$1} = $2;
-	}
-	close(INPUT) || die "can’t close languages: $!";
-}
 
 sub conv_lang {
-	our %languages;
-	my $lang = shift;
-	return $languages{$lang} || $lang;
+	return code2language($_[0]) || $_[0];
 }
 
 sub tellico_output {
