@@ -9,30 +9,30 @@ fb2meta - manipulate meta information of FictionBook files collection
 
 =head1 SYNOPSIS
 
-B<fb2meta> B<list> [B<-t>|B<-f>I<pattern>] [I<directory>]
+B<fb2meta> B<list> [B<-t>|B<-f>I<pattern>] [I<directory>...]
 
-B<fb2meta> B<export> I<format> [I<directory>]
+B<fb2meta> B<export> I<format> [I<directory>...]
 
-B<fb2meta> B<uniq> [-c] I<attribute> [I<directory>]
+B<fb2meta> B<uniq> [-c] I<attribute> [I<directory>...]
 
-B<fb2meta> B<rename> [B<-z>] I<pattern>   [I<directrory>]
+B<fb2meta> B<rename> [B<-z>] I<pattern>   [I<directrory>...]
 
 B<fb2meta> B<update> [B<-s>] I<attribute>=I<value>  I<files...>
 
-B<fb2meta> B<fix> I<attribute> I<filename> [I<directory>]
+B<fb2meta> B<fix> I<attribute> I<filename> [I<directory>...]
 
-B<fb2meta> B<find> [B<-0>] I<expression> [I<directory>]
+B<fb2meta> B<find> [B<-0>] I<expression> [I<directory>...]
 
 =cut
 
 
 sub HELP_MESSAGE {
-  print "fb2meta list [-t|-f pattern] [directory]\n",
-  "fb2meta uniq [-c] attribute [directory]\n",
-  "fb2meta rename [-z] pattern [directory]\n",
-  "fb2meta find [-0] expression [directory]\n",
+  print "fb2meta list [-t|-f pattern] [directory...]\n",
+  "fb2meta uniq [-c] attribute [directory...]\n",
+  "fb2meta rename [-z] pattern [directory...]\n",
+  "fb2meta find [-0] expression [directory...]\n",
   "fb2meta update [-s] attribute=value [-s attribute=value...] files..\n",
-  "fb2meta fix attribute substtable [directory]\n";
+  "fb2meta fix attribute substtable [directory...]\n";
   exit(1);
 }
 
@@ -56,7 +56,8 @@ produces an error.
 
 =item B<list>
 
-Default behavoir is to list more or less complete metainformation.
+Outputs more or less complete metainformation for all FB2 files in given
+directory(ies) to stdout.
 Following formats of listing are supported
 
 =over 8
@@ -83,7 +84,7 @@ Uses printf-like format to format output. See B<FORMAT STRING> below.
 
 =item B<export>
 
-Export books metadate to external collection.
+Export books metadata from all files in given directory(ies) to external collection.
 
 Supported formats:
 
@@ -99,7 +100,8 @@ Tellico is a collection manager for KDE (http://www.periapsis.org/tellico/).
 
 =item B<uniq>
 
-Produces list of unique values of specified attribute. See
+Produces list of unique values of specified attribute from all files in
+the given directory(ies) See
 B<ATTRIBUTES> below for syntax of attribute specification. If B<-c>
 option is specified, than value preceeded by count of occurences.
 
@@ -129,7 +131,7 @@ and file1 would be number 1 in this sequence, file2 - number2 etc.
 
 =item B<fix>
 
-Updates given attribute in the directory tree according to file of
+Updates given attribute in the directory tree(s) according to file of
 search/replace pairs. File should contain two values, separated by colon
 on each line - original (as prodiced by appropriate B<uniq> command) and
 new. Lines without colon are ignored, so file, produced by B<uniq>
@@ -142,21 +144,31 @@ By default, prints one filename per line. If B<-0> option is specified,
 file names are separated by '\0' symbol (suitable for B<xargs -0>).
 
 Expression could contain condition on attributes, combined by AND and OR
-operators. For most attributes (except B<sequence.num> and B<date>) only
-B<=> and B<!=> conditions are available.
+operators.
 
 For attributes which has multiple values several expressions which seems
 to be mutually exclusive can be specified. For example
 
-  author="Anne McCaffree" and author!="Elisabeth Scarborro"
+  author="Anne McCaffree" and not author="Elisabeth Scarborro"
 
 means "Find the books by Anne McCaffree, which are not coauthored by
 Elisabeth Scarrboro".
+
+Note subtle difference in the semanic of not = and != for multi-valued
+attributes:
+
+= means "There exist at least one value equal to...". not = is logical
+negation of "=" - "There exist no value equal to"
+
+!= means "There exist at least one value not equal to..".
 
 If only first and last name of author are specified, any author with
 same first and last name, regardless of middle_name value is considered
 matching. Use two spaces between first and last name if you want author
 with empty middle name.
+
+Apart from condition, predicate B<exists> I<attribute> can be used for
+attributes which are allowed to absent.
 
 =back
 
@@ -715,7 +727,7 @@ sub do_uniq {
 	scan_tree(\&attrlist_output);
 	print STDERR "\r"," "x78,"\r";
 	if ($opt_c) {
-		foreach my $key (sort {$attrlist{$a} <=> $attrlist{$b}}
+		foreach my $key (sort {$attrlist{$a} <=> $attrlist{$b}|| $a cmp $b}
 		   keys(%attrlist)) {
 
 		   printf "%5d %s\n",$attrlist{$key},fix_format($key);
@@ -817,7 +829,12 @@ sub progress {
 #
 sub scan_tree {
 	our $output = shift;
-	find({no_chdir =>1, wanted=>\&check_file},$ARGV[0]||".");
+	if (!@ARGV) {
+		unshift @ARGV,".";
+	}
+	for my $dir (@ARGV) {
+		find({no_chdir =>1, wanted=>\&check_file},$dir);
+	}
 }
 
 
