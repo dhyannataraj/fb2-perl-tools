@@ -636,7 +636,6 @@ sub do_export {
 
 sub do_export_tellico {
 	our $encoding;
-	read_langs();
 	our $xmlwriter = new XML::Writer(OUTPUT=> \*STDOUT,DATA_MODE=>1, DATA_INDENT=>2);
 	$xmlwriter->xmlDecl($encoding);
 	$xmlwriter->startTag('tellico', 'xmlns'=>'http://periapsis.org/tellico/', 'syntaxVersion'=>'9');
