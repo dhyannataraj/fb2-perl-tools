@@ -33,7 +33,7 @@ _spaces_re = re.compile( r'[ \t\r\n]{2,}|[\t\r\n]' )
 _empty_element_re = re.compile( r'<([^ >]+)([^>]*)(?<!/)></\1>' )
 def _make_tags_switch( tags ):
 	return re.compile( '(%s)' % '|'.join( '<%s(?: [^>]*)?>.*?</%s>' % (tag, tag) for tag in tags ), re.DOTALL )
-_text_re = _make_tags_switch( ('p', 'v', 'subtitle', 'text-author') )
+_text_re = _make_tags_switch( ('p', 'v', 'subtitle', 'text-author', 'th', 'td') )
 _oneline_re = _make_tags_switch( ('title', 'author', 'translator') )
 _binary_re = re.compile( '(<binary [^>]*>)([^<]*)(</binary>)', re.DOTALL )
 
