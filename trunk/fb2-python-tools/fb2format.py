@@ -30,6 +30,7 @@ import re, base64
 import sys, getopt, os, os.path, xml.dom.minidom, codecs, cStringIO
 
 _spaces_re = re.compile( r'[ \t\r\n]{2,}|[\t\r\n]' )
+_empty_element_re = re.compile( r'<([^ >]+)([^>]*)(?<!/)></\1>' )
 def _make_tags_switch( tags ):
 	return re.compile( '(%s)' % '|'.join( '<%s(?: [^>]*)?>.*?</%s>' % (tag, tag) for tag in tags ), re.DOTALL )
 _text_re = _make_tags_switch( ('p', 'v', 'subtitle', 'text-author') )
@@ -49,13 +50,13 @@ def _squeeze_tag( s ):
 	if _text_re.match( s ):
 		return s
 	else:
-		return s.strip( ' ' ).replace( '> ', '>' ).replace( ' <', '<' )
+		return _empty_element_re.sub( r'<\1\2/>', s.strip( ' ' ).replace( '> ', '>' ).replace( ' <', '<' ) )
 
 def _format_tag( s ):
 	if _text_re.match( s ):
 		return s
 	else:
-		return s.strip( ' ' ).replace( '> ', '>' ).replace( ' <', '<' ).replace( '><', '>\n<' )
+		return _empty_element_re.sub( r'<\1\2/>', s.strip( ' ' ).replace( '> ', '>' ).replace( ' <', '<' ) ).replace( '><', '>\n<' )
 
 def fb2format( data, squeeze = False, squeezeBinary = False ):
 	data = _spaces_re.sub( ' ', data )
