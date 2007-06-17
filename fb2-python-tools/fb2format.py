@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
 	if verbose:
 		import progress_display
-		args = progress_display.progress_iter( args, os.path.basename, sys.stderr )
+		args = progress_display.progress_iter( args )
 
 	for filename in args:
 		try:
@@ -143,12 +143,13 @@ if __name__ == '__main__':
 			if filename == '-':
 				sys.stdout.write( data )
 			elif data != data0:
-					open( filename + '.tmp', 'w' ).write( data )
+					tmpfilename = filename + '.tmp'
+					open( tmpfilename, 'w' ).write( data )
 					if keepBackup:
 						os.rename( filename, filename + backupSuffix )
-					os.rename( filename + '.tmp', filename )
+					os.rename( tmpfilename, filename )
 		except (KeyboardInterrupt, SystemExit):
 			raise
-# 		except Exception, err:
-# 			print >>sys.stderr, 'Error processing %s:' % filename
-# 			print >>sys.stderr, err
+		except Exception, err:
+			print >>sys.stderr, 'Error processing %s:' % filename
+			print >>sys.stderr, err
