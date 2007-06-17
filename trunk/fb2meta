@@ -96,6 +96,13 @@ Export to Tellico book collection.
 
 Tellico is a collection manager for KDE (http://www.periapsis.org/tellico/).
 
+=item B<onix>
+
+Export to ONIX format.
+
+ONIX (http://www.editeur.org/onix.html) is an XML format for representing
+and communicating book industry product information, primarily for book vendors.
+
 =back
 
 =item B<uniq>
@@ -512,21 +519,24 @@ sub conv_lang {
 	return code2language($_[0]) || $_[0];
 }
 
+sub format_name1 {
+	my $s = $_->{'last-name'};
+	if (exists $_->{'first-name'}) {
+		$s .= ', '.$_->{'first-name'};
+		if (exists $_->{'middle-name'}) {
+			$s .= ' '.$_->{'middle-name'};
+		}
+	}
+	return $s;
+}
 sub tellico_output {
 	our %genres_transfer;
 	$xmlwriter->startTag('entry');
 	simple_element($xmlwriter,'title',$metainfo{'Title'});
 	foreach my $person ('author','translator') {
 		$xmlwriter->startTag(${person}.'s') ;
-		foreach my $a (@{$metainfo{$person}}) {
-			my $s = $a->{'last-name'};
-			if (exists $a->{'first-name'}) {
-				$s .= ', '.$a->{'first-name'};
-				if (exists $a->{'middle-name'}) {
-					$s .= ' '.$a->{'middle-name'};
-				}
-			}
-			simple_element($xmlwriter,$person,$s);
+		foreach (@{$metainfo{$person}}) {
+			simple_element($xmlwriter,$person,format_name1($_));
 		}
 		$xmlwriter->endTag();
 	}
@@ -651,8 +661,10 @@ sub do_list {
 
 sub do_export {
 	our $format = shift @ARGV;
-	if ($format=='tellico') {
-		do_export_tellico()
+	if ($format eq 'tellico') {
+		do_export_tellico();
+	} elsif ($format eq 'onix') {
+		do_export_onix();
 	} else {
 		die ("Invalid format $format\n");
 	}
@@ -701,6 +713,46 @@ sub do_export_tellico {
 	$xmlwriter->endTag();
 	scan_tree( \&tellico_output);
 	$xmlwriter->endTag();
+	$xmlwriter->endTag();
+	$xmlwriter->end();
+}
+
+sub onix_output {
+	our $recordReference;
+	$xmlwriter->startTag('Product');
+	simple_element($xmlwriter,'RecordReference',$recordReference++);
+	simple_element($xmlwriter,'NotificationType','03');
+# 	simple_element($xmlwriter,'RecordSourceName','fb2meta');
+	simple_element($xmlwriter,'ISBN',''); # TODO
+	simple_element($xmlwriter,'ProductForm','DG'); # Electronic book text
+	simple_element($xmlwriter,'DistinctiveTitle',$metainfo{'Title'});
+	foreach (@{$metainfo{'author'}}) {
+		$xmlwriter->startTag('Contributor');
+		simple_element($xmlwriter,'ContributorRole','A01'); # By (author)
+		simple_element($xmlwriter,'PersonName',format_name1($_));
+		$xmlwriter->endTag();
+	}
+	foreach (@{$metainfo{'translator'}}) {
+		$xmlwriter->startTag('Contributor');
+		simple_element($xmlwriter,'ContributorRole','B06'); #Translated by
+		simple_element($xmlwriter,'PersonName',format_name1($_));
+		$xmlwriter->endTag();
+	}
+	simple_element($xmlwriter,'PublisherName',''); # TODO
+	$xmlwriter->endTag();
+}
+
+sub do_export_onix {
+	our $recordReference = 0;
+	our $encoding;
+	our $xmlwriter = new XML::Writer(OUTPUT=> \*STDOUT,DATA_MODE=>1, DATA_INDENT=>2);
+	$xmlwriter->xmlDecl($encoding);
+	$xmlwriter->startTag('ONIXMessage');
+	$xmlwriter->startTag('Header');
+	simple_element($xmlwriter,'SentDate',''); # TODO
+# 	simple_element($xmlwriter,'MessageNote','');
+	$xmlwriter->endTag();
+	scan_tree( \&onix_output);
 	$xmlwriter->endTag();
 	$xmlwriter->end();
 }
