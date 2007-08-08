@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+Copyright 2007 by KiR Jakobson ( http://kir666.ru/fb2docbook/ )
+
+This library is free software; you can redistribute it and/or modify
+it under the terms of the General Public License (GPL).  For
+more information, see http://www.fsf.org/licenses/gpl.txt
+
+-->
+
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:fb="http://www.gribuser.ru/xml/fictionbook/2.0"
     xmlns:exsl="http://exslt.org/common" xmlns:redirect="http://xml.apache.org/xalan/redirect"
