@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<l10n language="en" english-language-name="English">
+   <param name="SeeAbr" text="See"/>
+   <param name="seeabr" text="see"/>
+   <param name="Preface" text="Preface"/>
+   <param name="error.bad.note" text="Not found footnote"/>
+   <param name="Nickname" text="Nickname"/>
+   <param name="Homepage" text="Homepage"/>
+   
+   <context name="title-info">
+      <title text="Information about work"/>
+      <param name="author" text="Authors"/>
+      <param name="genre" text="Genres"/>
+      <param name="book-title" text="Title"/>
+      <param name="annotation" text="Abstract"/>
+      <param name="keywords" text="Keywords"/>
+      <param name="date" text="Date"/>
+      <param name="coverpage" text="Coverpage"/>
+      <param name="lang" text="Language"/>
+      <param name="src-lang" text="Original Language"/>
+      <param name="translator" text="Translators"/>
+      <param name="sequence" text="Sequence"/>
+      <param name="sequence.number" text="number in sequence"/>
+   </context>
+   
+   <context name="src-title-info">
+      <title text="Information about original work"/>
+      <param name="author" text="Authors"/>
+      <param name="genre" text="Genres"/>
+      <param name="book-title" text="Title"/>
+      <param name="annotation" text="Abstract"/>
+      <param name="keywords" text="Keywords"/>
+      <param name="date" text="Date"/>
+      <param name="coverpage" text="Coverpage"/>
+      <param name="lang" text="Language"/>
+      <param name="src-lang" text="Original Language"/>
+      <param name="translator" text="Translators"/>
+      <param name="sequence" text="Sequence"/>
+      <param name="sequence.number" text="number in sequence"/>
+   </context>
+   
+   <context name="publish-info">
+      <title text="Information about printed book"/>
+      <param name="book-name" text="Title"/>
+      <param name="publisher" text="Publisher"/>
+      <param name="city" text="City"/>
+      <param name="year" text="Year"/>
+      <param name="isbn" text="ISBN"/>
+   </context>
+   
+   <context name="document-info">
+      <title text="Information about FB2-document"/>
+      <param name="author" text="Authors"/>
+      <param name="program-used" text="Programs used for creation"/>
+      <param name="date" text="Date"/>
+      <param name="src-url" text="Source"/>
+      <param name="src-ocr" text="Author of OCR or original document"/>
+      <param name="id" text="Identification"/>
+      <param name="version" text="Version"/>
+      <param name="history" text="History"/>
+   </context>
+   
+   <context name="custom-info">
+      <title text="Additional custom information"/>
+   </context>
+   
+   <context name="technical-appendix">
+      <title text="Information about conversion"/>
+      <param name="xslt.processor" text="XSLT processor"/>
+   </context>
+</l10n>

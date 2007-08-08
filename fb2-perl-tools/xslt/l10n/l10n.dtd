@@ -1,0 +1,2 @@
+<!ELEMENT i18n (#PCDATA)>
+<!ATTLIST i18n default.language CDATA #IMPLIED>

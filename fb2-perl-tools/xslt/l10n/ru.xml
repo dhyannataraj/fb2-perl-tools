@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<l10n language="ru" english-language-name="Russian">
+   <param name="SeeAbr" text="См."/>
+   <param name="seeabr" text="см."/>
+   <param name="Preface" text="Вступление"/>
+   <param name="error.bad.note" text="Отсутствует текст ссылки"/>
+   <param name="Nickname" text="Псевдоним"/>
+   <param name="Homepage" text="Сайт"/>
+   
+   <context name="title-info">
+      <title text="Информация о произведении"/>
+      <param name="author" text="Авторы"/>
+      <param name="genre" text="Жанры"/>
+      <param name="book-title" text="Название"/>
+      <param name="annotation" text="Аннотация"/>
+      <param name="keywords" text="Ключевые слова"/>
+      <param name="date" text="Дата"/>
+      <param name="coverpage" text="Обложка"/>
+      <param name="lang" text="Язык"/>
+      <param name="src-lang" text="Язык оригинала"/>
+      <param name="translator" text="Переводчики"/>
+      <param name="sequence" text="Серия"/>
+      <param name="sequence.number" text="номер в серии"/>
+   </context>
+   
+   <context name="src-title-info">
+      <title text="Информация об оригинальном произведении"/>
+      <param name="author" text="Авторы"/>
+      <param name="genre" text="Жанры"/>
+      <param name="book-title" text="Название"/>
+      <param name="annotation" text="Аннотация"/>
+      <param name="keywords" text="Ключевые слова"/>
+      <param name="date" text="Дата"/>
+      <param name="coverpage" text="Обложка"/>
+      <param name="lang" text="Язык"/>
+      <param name="src-lang" text="Язык оригинала"/>
+      <param name="translator" text="Переводчики"/>
+      <param name="sequence" text="Серия"/>
+      <param name="sequence.number" text="номер в серии"/>
+   </context>
+   
+   <context name="publish-info">
+      <title text="Информация о бумажном издании"/>
+      <param name="book-name" text="Название"/>
+      <param name="publisher" text="Издательство"/>
+      <param name="city" text="Место"/>
+      <param name="year" text="Год"/>
+      <param name="isbn" text="ISBN"/>
+   </context>
+   
+   <context name="document-info">
+      <title text="Информация о FB2-документе"/>
+      <param name="author" text="Авторы"/>
+      <param name="program-used" text="Программы, использованные при подготовке"/>
+      <param name="date" text="Дата"/>
+      <param name="src-url" text="Источник"/>
+      <param name="src-ocr" text="Автор OCR или оригинального документа"/>
+      <param name="id" text="Идентификатор"/>
+      <param name="version" text="Версия"/>
+      <param name="history" text="История"/>
+   </context>
+   
+   <context name="custom-info">
+      <title text="Дополнительная нестандартная информация"/>
+   </context>
+   
+   <context name="technical-appendix">
+      <title text="Информация о конвертации"/>
+      <param name="xslt.processor" text="XSLT процессор"/>
+   </context>
+</l10n>
