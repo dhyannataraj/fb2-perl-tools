@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!DOCTYPE i18n SYSTEM "l10n.dtd" [
+<!ENTITY en SYSTEM "en.xml">
+<!ENTITY ru SYSTEM "ru.xml">
+]>
+<i18n>
+&en;
+&ru;
+</i18n>
