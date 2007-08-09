@@ -1,7 +1,9 @@
 package fb2::Description::Extend;
 
 use strict;
-use XML::DOM;
+use XML::LibXML;
+use XML::LibXML::Common;
+our $VERSION=0.02;
 
 
 =head2 extend
@@ -110,7 +112,7 @@ sub _extend_description_fill_complex_node
   my $par=shift;
   my $node=shift;
   
-  my $name=$node->getNodeName();
+  my $name=$node->nodeName();
   my $doc=$node->getOwnerDocument;
   my $children_info=_get_node_children_info($name);
   
@@ -126,11 +128,11 @@ sub _extend_description_fill_complex_node
   
   foreach my $child ($node->getChildNodes)  # Loops all child nodes
   {
-    if ($child->getNodeType == ELEMENT_NODE)         # When element node is found
+    if ($child->nodeType == ELEMENT_NODE())         # When element node is found
     {
-      my $num = $name_to_num{$child->getNodeName};   # Get it's number in children_info array
-      die "Node '".$child->getNodeName."' is not allowed inside '".$node->getNodeName."'" unless defined $num;
-      die "Invalid child node order inside '".$node->getNodeName."'" if $num<$last_processed_child_num;
+      my $num = $name_to_num{$child->nodeName};   # Get it's number in children_info array
+      die "Node '".$child->nodeName."' is not allowed inside '".$node->nodeName."'" unless defined $num;
+      die "Invalid child node order inside '".$node->nodeName."'" if $num<$last_processed_child_num;
       
       for(my $i=$last_processed_child_num+1;$i<$num;$i++)                           # If there shuld be children between
       {                                                                             # current child and last processed
@@ -175,13 +177,13 @@ sub _extend_description_fill_complex_node
     }
   }  
   
-  if ($node->getFirstChild && $node->getFirstChild->getNodeType == ELEMENT_NODE)  # If first node is element_node
+  if ($node->getFirstChild && $node->getFirstChild->nodeType == ELEMENT_NODE)  # If first node is element_node
   {                                                                               # then add an offset, for better view
     my $offset_node = $doc->createTextNode("\n".(' ' x $par->{'offset'}));
     $node->insertBefore($offset_node,$node->getFirstChild);
   }
   
-  if ($node->getLastChild && $node->getLastChild->getNodeType == ELEMENT_NODE)    # If last node is element_node
+  if ($node->getLastChild && $node->getLastChild->nodeType == ELEMENT_NODE)    # If last node is element_node
   {                                                                               # then add an offset, for better view
     my $offset_node = $doc->createTextNode("\n".(' ' x ($par->{'offset'} - $par->{'offset_step'})));
     $node->appendChild($offset_node);
