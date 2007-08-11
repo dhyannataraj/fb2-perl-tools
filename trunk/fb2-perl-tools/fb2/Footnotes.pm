@@ -146,7 +146,7 @@ sub Add
     my $node = $_;
     foreach ($node->attributes())
     {
-       if ( ($_->nodeName eq 'type') && ($_->value eq 'note')) 
+       if ( ($_->nodeName eq 'name') && ($_->value eq 'notes')) 
       {
         # It's assumed that there is only one note-body in the book
 	$note_body  = $node;
@@ -156,7 +156,7 @@ sub Add
   if (! $note_body)
   {
     $note_body = $doc->createElement('body');
-    $note_body->setAttribute('type','note');
+    $note_body->setAttribute('name','notes');
     $book->appendChild($doc->createTextNode('  '));
     $book->appendChild($note_body);
     $book->appendChild($doc->createTextNode("\n"));
