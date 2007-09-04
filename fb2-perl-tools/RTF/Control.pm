@@ -56,12 +56,10 @@ use constant TOP => -1;		# access to the TOP element of a stack
 			   process_char_props
 			   reset_char_props
 
-			   set_input_charset
-			   set_output_charset
-			   $InMapper
-			   $OutMapper
 			   from_unicode
-			  );
+			 );  
+
+			 
 ###########################################################################
 
 %do_on_event = ();		# output routines
@@ -107,14 +105,14 @@ sub accept_options {
   die "Bad params for accept options" unless ref($optdef) eq 'HASH';
   my %opts = %$optdef;
 
-  # Проверяем все переданные опции
+  # п÷я─п╬п╡п╣я─я▐п╣п╪ п╡я│п╣ п©п╣я─п╣п╢п╟п╫п╫я▀п╣ п╬п©я├п╦п╦
   while (my ($key, $value) = each %arg) {
     next unless exists $opts{$key};
     $self->{$key} = $value;
     delete $opts{$key};
   }
 
-  # И определим умолчания
+  # п≤ п╬п©я─п╣п╢п╣п╩п╦п╪ я┐п╪п╬п╩я┤п╟п╫п╦я▐
   while (my ($key, $value) = each %opts) {
     next unless defined $value;
     $self->{$key} = $value unless exists $self->{$key};
@@ -129,18 +127,16 @@ sub configure {
     (
      {
       Output => \*STDOUT,
-      InputCharset => 'cp1251',  # Какой принять входным если нет ansicpg
-      StrictInputCharset => '',   # Если задан - то плевать на InCharset
-      OutputCharset => 'koi8-r', # В каком charset-е выводить
+      InputCharset => 'cp1251',  # п п╟п╨п╬п╧ п©я─п╦п╫я▐я┌я▄ п╡я┘п╬п╢п╫я▀п╪ п╣я│п╩п╦ п╫п╣я┌ ansicpg
+      StrictInputCharset => '',  # п∙я│п╩п╦ п╥п╟п╢п╟п╫ - я┌п╬ п©п╩п╣п╡п╟я┌я▄ п╫п╟ InCharset
+      OutputCharset => 'utf-8',  # п▓ п╨п╟п╨п╬п╪ charset-п╣ п╡я▀п╡п╬п╢п╦я┌я▄
       CatdocCharsets => '/usr/local/lib/catdoc',
      },
      @_
     );
   set_top_output_to($self->{Output});
   set_catdoc_libs($self->{CatdocCharsets});
-  require Communiware::Charset;
-  Communiware::Charset::init_charset($self->{OutputCharset})
-      unless ($Communiware::Charset::replace_string);
+  
   $self;
 }
 
@@ -163,83 +159,37 @@ sub application_dir {
 
 
 ###########################################################################
-# Поддержка перекодировок
+# п÷п╬п╢п╢п╣я─п╤п╨п╟ п©п╣я─п╣п╨п╬п╢п╦я─п╬п╡п╬п╨
+use Encode;
 use vars qw/
-  $InMapper 
   $InCharset 
-  $OutMapper
   $OutCharset
-  @directMapper
   $CatdocCharsets
   /;
 
-# Где лежат файлы чарсетов
-($InMapper, $OutMapper, $InCharset, $OutCharset, $CatdocCharsets) = 
-  (undef, undef, '', '', '');
+# п⌠п╢п╣ п╩п╣п╤п╟я┌ я└п╟п╧п╩я▀ я┤п╟я─я│п╣я┌п╬п╡
+($InCharset, $OutCharset, $CatdocCharsets) = 
+  ('', '', '');
 
 sub set_catdoc_libs {$CatdocCharsets = $_[0]}
 
-sub set_input_charset {
-  my $charset= shift;
-  return if ($InCharset eq $charset);
-  my ($code,$unicode);
-  my $chrsname = "$CatdocCharsets/$charset.txt";
-  die "Cannot set input charset to $charset, no $chrsname" unless -f $chrsname;
-  open CHARSET, $chrsname;
-  $InMapper = {};
-  while (<CHARSET>) {
-     next unless /^\s*(0x[0-9A-Fa-f]{2})\s+((0x)?[0-9A-Fa-f]{4})/;
-      $code = hex($1); $unicode = hex($2);
-      $InMapper->{$unicode}=chr($code);
-      $directMapper[$code] = $unicode;
-  }    
-  close CHARSET;
-  $InCharset = $charset;
-}
-
-sub set_output_charset {
-  my $charset= shift;
-  return if ($OutCharset eq $charset);
-  my ($code,$unicode);
-  my $chrsname = "$CatdocCharsets/$charset.txt";
-  die "Cannot set output charset to $charset, no $chrsname" unless -f $chrsname;
-  open CHARSET, $chrsname;
-  $OutMapper = {};
-  while (<CHARSET>) {
-     next unless /^\s*(0x[0-9A-Fa-f]{2})\s+((0x)?[0-9A-Fa-f]{4})/;
-      $code = chr(hex($1)); $unicode = hex($2);
-      $OutMapper->{$unicode} =$code;
-  }    
-  close CHARSET;
-  $OutCharset = $charset;
-}
-
-sub make_direct_map {
-  my $i;
-  foreach $i (grep {defined} @directMapper) {
-    
-    $i = $OutMapper->{$i} || '"';
-  }
-}  
 sub from_unicode {
-  return ($InMapper->{$_[0]} || '"');
+ return $_[0];
+# п╜я┌п╬пЁп╬ п╪п╬п╪п╣п╫я┌п╟ я▐ п╫п╣ п©п╬п╫я▐п╩... п╖я┌п╬ п╠я▀ п╪я▀ п╫п╣ п╡п╬п╥п╡я─п╟я┴п╟п╩п╦, п╡я│п╣ я─п╟п╡п╫п╬ п╡я│п╣ я─п╟п╠п╬я┌п╟п╣я┌ п©я─п╟п╡п╦п╩я▄п╫п╬ :-/
+# п═п╟п╥п╠п╦я─п╟я┌я▄я│я▐ п©п╬п╨п╟ п╩п╣я┌я▄... п═п╟п╠п╬я┌п╟п╣я┌ п╤п╣ ;-) 
+# п╗п╟п©п╩п╬п╡.
+
+#  return "b";
+# return ($InMapper->{$_[0]} || '"');
 }
 
 
-
-sub recode_char {
-   my $char= $directMapper[ord($_[0])];
-   $char = $Communiware::Charset::escaping{$char}
-     if exists $Communiware::Charset::escaping{$char};
-   return $char;
-}   
 
 sub recode_string {
-   local $_ = shift;
-   s/([\200-\377])/$directMapper[ord($1)]/eg;
-   s/([$Communiware::Charset::replace_string])/$Communiware::Charset::escaping{$1}/eg;
-
-   return $_;
+   my $in_str = shift;
+   my $utf8_str = Encode::decode($InCharset,$in_str);
+   my $out_str = Encode::encode($OutCharset,$utf8_str,Encode::FB_XMLCREF);
+   return $out_str;
 }  
 ###########################################################################
 				# Utils
@@ -317,7 +267,7 @@ sub set_top_output_to {
 
 # the default prints on the selected output filehandle
 sub flush_top_output {
-  # Печатать или как есть, или с перекодировкой
+  # п÷п╣я┤п╟я┌п╟я┌я▄ п╦п╩п╦ п╨п╟п╨ п╣я│я┌я▄, п╦п╩п╦ я│ п©п╣я─п╣п╨п╬п╢п╦я─п╬п╡п╨п╬п╧
   my $o = ($InCharset eq $OutCharset) ? 
     $output_stack[TOP] : recode_string( $output_stack[TOP]);
   print $o;
@@ -1252,7 +1202,6 @@ sub unicodechar {
 }
 
 use constant PARSE_START_END => 0;
-
 sub parse_start {
   my $self = shift;
 
@@ -1261,10 +1210,12 @@ sub parse_start {
   %fonttbl = ();
   %colortbl = ();
   %stylesheet = ();
-
-  set_input_charset($self->{StrictInputCharset} || $self->{InputCharset});
-  set_output_charset($self->{OutputCharset});
-  make_direct_map();
+  $InCharset = $self->{StrictInputCharset} || $self->{InputCharset};
+  $OutCharset = $self->{OutputCharset};
+  
+#  set_input_charset($self->{StrictInputCharset} || $self->{InputCharset});
+#  set_output_charset($self->{OutputCharset});
+#  make_direct_map();
   push_output();
   if (defined (my $action = $do_on_event{'document'})) {
     $event = 'start';
@@ -1273,7 +1224,6 @@ sub parse_start {
   flush_top_output();	
   push_output();
 }
-
 sub parse_end {
   my $self = shift;
   my $action = '';
