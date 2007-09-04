@@ -74,12 +74,7 @@ current directory.
 =cut
 
 require 5.004;
-use lib qw(/cmw/perllib /cmw/perllib/i386-linux-thread-multi);
 use strict;
-
-BEGIN {
-	delete $ENV{MOD_PERL};
-};
 
 use File::Basename;
 use Getopt::Long;
@@ -134,16 +129,17 @@ $opt{strictincharset} and $par{StrictInputCharset} = $opt{strictincharset};
 
 $opt{tables} and $par{CatdocCharsets} = $opt{tables};
 
-if (defined $par{OutputCharset} && !-f "$par{CatdocCharsets}/$par{OutputCharset}.txt") {
-  open F, "$par{CatdocCharsets}/charset.map" or die "$par{CatdocCharsets}/charset.map:$!";
-  while (<F>) {
-    next if /^\s*#/ || /^\s*$/;
-    my ($mime_name,$table_name) = split;
-    $par{OutputCharset}=$table_name if $mime_name eq $par{OutputCharset};
-  }
-}  
+#if (defined $par{OutputCharset} && !-f "$par{CatdocCharsets}/$par{OutputCharset}.txt") {
+#  open F, "$par{CatdocCharsets}/charset.map" or die "$par{CatdocCharsets}/charset.map:$!";
+#  while (<F>) {
+#    next if /^\s*#/ || /^\s*$/;
+#    my ($mime_name,$table_name) = split;
+#    $par{OutputCharset}=$table_name if $mime_name eq $par{OutputCharset};
+#  }
+# }  
 
-die "Unknown output charset $par{OutputCharset}" if $par{OutputCharset} && ! -f "$par{CatdocCharsets}/$par{OutputCharset}.txt";
+# die "Unknown output charset $par{OutputCharset}" if $par{OutputCharset} && ! -f "$par{CatdocCharsets}/$par{OutputCharset}.txt";
+
 unless (defined $ARGV[0]) {
   # stdin -> stdout
   $cnv = new RTF::HTML::Converter(%par);
@@ -163,8 +159,8 @@ unless (defined $ARGV[0]) {
 }
 
 
-# “≈œ¬“¡⁄œ◊¡Œ…≈ À¡“‘…ŒœÀ - ‘œÃÿÀœ ≈”Ã… …» ÀœŒ◊≈“‘¡√…— –œƒƒ≈“÷…◊¡≈‘”— ◊ ‘≈À’›≈ 
-# ÀœŒ∆…«’“¡√……
+# –ü—Ä–µ–æ–±—Ä–∞–∑–æ–≤–∞–Ω–∏–µ –∫–∞—Ä—Ç–∏–Ω–æ–∫ - —Ç–æ–ª—å–∫–æ –µ—Å–ª–∏ –∏—Ö –∫–æ–Ω–≤–µ—Ä—Ç–∞—Ü–∏—è –ø–æ–¥–¥–µ—Ä–∂–∏–≤–∞–µ—Ç—Å—è –≤ —Ç–µ–∫—É—â–µ–π
+# –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏–∏
 if ($par{ImageDir} ne 'NONE') {
   my %job = $cnv->files2convert();
 
@@ -173,7 +169,7 @@ if ($par{ImageDir} ne 'NONE') {
     next unless $to =~ /\.png$/;
     die "No source file $from" unless -f $from;
 
-    # ıƒ¡Ã—≈Õ dst
+    # –£–¥–∞–ª—è–µ–º dst
     unlink $to;
     die "Dst file $to cannot be deleted before converting" if -f $to;
 
