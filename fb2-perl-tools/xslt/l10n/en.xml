@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-Copyright 2007 by KiR Jakobson ( http://kir666.ru/fb2docbook/ )
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the General Public License (GPL).  For
-more information, see http://www.fsf.org/licenses/gpl.txt
-
--->
-
 <l10n language="en" english-language-name="English">
    <param name="SeeAbr" text="See"/>
    <param name="seeabr" text="see"/>
@@ -77,5 +67,6 @@ more information, see http://www.fsf.org/licenses/gpl.txt
    <context name="technical-appendix">
       <title text="Information about conversion"/>
       <param name="xslt.processor" text="XSLT processor"/>
+      <param name="conversion-date-time" text="Date and time of transformation Fictionbook2 — Docbook"/>
    </context>
 </l10n>

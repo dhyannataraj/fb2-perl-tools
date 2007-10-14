@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 
-
-Copyright 2007 by KiR Jakobson ( http://kir666.ru/fb2docbook/ )
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the General Public License (GPL).  For
-more information, see http://www.fsf.org/licenses/gpl.txt
-
+    
+    Copyright 2007 by KiR Jakobson ( http://kir666.ru/fb2docbook/ )
+    
+    This library is free software; you can redistribute it and/or modify
+    it under the terms of the General Public License (GPL).  For
+    more information, see http://www.fsf.org/licenses/gpl.txt
+    
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -390,7 +390,7 @@ more information, see http://www.fsf.org/licenses/gpl.txt
     </xsl:template>
     <xsl:template name="a_xref">
         <xsl:param name="href_id"/>
-        <xref linkend="{$href_id}"/>            
+        <xref linkend="{$href_id}"/>
     </xsl:template>
     <xsl:template name="metadata_author">
         <xsl:choose>
@@ -411,37 +411,56 @@ more information, see http://www.fsf.org/licenses/gpl.txt
                     <xsl:text>&quot;</xsl:text>
                 </xsl:if>
             </xsl:otherwise>
-        </xsl:choose>        
+        </xsl:choose>
     </xsl:template>
     <xsl:template name="write_binaries_tree">
         <conversion_info>
             <page>
                 <dpi>
-                    <width><xsl:value-of select="$output.dpi.width"/></width>
-                    <height><xsl:value-of select="$output.dpi.height"/></height>
+                    <width>
+                        <xsl:value-of select="$output.dpi.width"/>
+                    </width>
+                    <height>
+                        <xsl:value-of select="$output.dpi.height"/>
+                    </height>
                 </dpi>
                 <size>
-                    <width><xsl:value-of select="$page.width"/></width>
-                    <height><xsl:value-of select="$page.height"/></height>
+                    <width>
+                        <xsl:value-of select="$page.width"/>
+                    </width>
+                    <height>
+                        <xsl:value-of select="$page.height"/>
+                    </height>
                 </size>
                 <max_image_margin>
-                    <width><xsl:value-of select="$output.max_image_margin.width"/></width>
-                    <height><xsl:value-of select="$output.max_image_margin.height"/></height>
+                    <width>
+                        <xsl:value-of select="$output.max_image_margin.width"/>
+                    </width>
+                    <height>
+                        <xsl:value-of select="$output.max_image_margin.height"/>
+                    </height>
                 </max_image_margin>
                 <images_mode>
-                    <resize><xsl:value-of select="$output.images_mode.resize"/></resize>
-                    <mode><xsl:value-of select="$output.images_mode.mode"/></mode>
-                    </images_mode>
+                    <resize>
+                        <xsl:value-of select="$output.images_mode.resize"/>
+                    </resize>
+                    <mode>
+                        <xsl:value-of select="$output.images_mode.mode"/>
+                    </mode>
+                </images_mode>
             </page>
-            <metadata>                
+            <metadata>
                 <Title>
-                    <xsl:value-of select="/fb:FictionBook/fb:description/fb:title-info/fb:book-title"/>
+                    <xsl:value-of
+                        select="/fb:FictionBook/fb:description/fb:title-info/fb:book-title"/>
                 </Title>
                 <Author>
-                    <xsl:for-each select="/fb:FictionBook/fb:description/fb:title-info/fb:author[position() = 1]">
+                    <xsl:for-each
+                        select="/fb:FictionBook/fb:description/fb:title-info/fb:author[position() = 1]">
                         <xsl:call-template name="metadata_author"/>
                     </xsl:for-each>
-                    <xsl:for-each select="/fb:FictionBook/fb:description/fb:title-info/fb:author[position() > 1]">
+                    <xsl:for-each
+                        select="/fb:FictionBook/fb:description/fb:title-info/fb:author[position() > 1]">
                         <xsl:text>; </xsl:text>
                         <xsl:call-template name="metadata_author"/>
                     </xsl:for-each>
@@ -684,15 +703,10 @@ more information, see http://www.fsf.org/licenses/gpl.txt
         </xsl:element>
     </xsl:template>
     <xsl:template match="fb:subtitle">
-        <simpara>
+        <bridgehead>
             <xsl:apply-templates select="@xml:lang|@id"/>
-            <emphasis role="{$fb2.subtitle.role}">
-                <xsl:apply-templates/>
-            </emphasis>
-        </simpara>
-        <xsl:processing-instruction name="dbfo">
-            <xsl:text>keep-together="always"</xsl:text>
-        </xsl:processing-instruction>
+            <xsl:apply-templates/>
+        </bridgehead>
     </xsl:template>
     <xsl:template match="fb:style">
         <xsl:comment> == style <xsl:value-of select="@name"/> == </xsl:comment>
