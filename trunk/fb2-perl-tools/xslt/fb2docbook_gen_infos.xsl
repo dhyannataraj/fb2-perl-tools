@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-Copyright 2007 by KiR Jakobson ( http://kir666.ru/fb2docbook/ )
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the General Public License (GPL).  For
-more information, see http://www.fsf.org/licenses/gpl.txt
-
+<!-- 
+    
+    Copyright 2007 by KiR Jakobson ( http://kir666.ru/fb2docbook/ )
+    
+    This library is free software; you can redistribute it and/or modify
+    it under the terms of the General Public License (GPL).  For
+    more information, see http://www.fsf.org/licenses/gpl.txt
+    
 -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:fb="http://www.gribuser.ru/xml/fictionbook/2.0"
-    xmlns:exsl="http://exslt.org/common" xmlns:redirect="http://xml.apache.org/xalan/redirect"
-    extension-element-prefixes="exsl redirect" version="1.1">
+    xmlns:exsl="http://exslt.org/common" xmlns:date="http://exslt.org/dates-and-times"
+    xmlns:redirect="http://xml.apache.org/xalan/redirect"
+    extension-element-prefixes="exsl date redirect" version="1.1">
     <xsl:import href="l10n/gentext.xsl"/>
     <xsl:template name="technical-appendix">
         <appendix id="{concat('tappendix', generate-id())}">
@@ -29,12 +30,21 @@ more information, see http://www.fsf.org/licenses/gpl.txt
                 <xsl:text>: </xsl:text>
                 <ulink url="{system-property('xsl:vendor-url')}">
                     <xsl:value-of select="system-property('xsl:vendor')"/>
-                </ulink> (XSLT version <xsl:value-of select="system-property('xsl:version')"/>).
-            </para>
+                </ulink> (XSLT version <xsl:value-of select="system-property('xsl:version')"/>). </para>
+            <xsl:if test="function-available('date:date-time')">
+                <para>
+                    <xsl:call-template name="gentext.info.param">
+                        <xsl:with-param name="context" select="'technical-appendix'"/>
+                        <xsl:with-param name="param" select="'conversion-date-time'"/>
+                    </xsl:call-template>
+                    <xsl:text>: </xsl:text>
+                    <xsl:value-of select="date:date-time()"/>                    
+                </para>
+            </xsl:if>
         </appendix>
     </xsl:template>
     <xsl:template name="title-info-appendix">
-        <xsl:if test="count(fb:description/fb:title-info)">
+        <xsl:if test="count(fb:description/fb:title-info) and count(fb:description/fb:title-info/*)">
             <xsl:for-each select="fb:description/fb:title-info">
                 <xsl:call-template name="title-info-appendix-wrk">
                     <xsl:with-param name="my_id"
@@ -48,7 +58,8 @@ more information, see http://www.fsf.org/licenses/gpl.txt
         </xsl:if>
     </xsl:template>
     <xsl:template name="src-title-info-appendix">
-        <xsl:if test="count(fb:description/fb:src-title-info)">
+        <xsl:if
+            test="count(fb:description/fb:src-title-info) and count(fb:description/fb:src-title-info/*)">
             <xsl:for-each select="fb:description/fb:src-title-info">
                 <xsl:call-template name="title-info-appendix-wrk">
                     <xsl:with-param name="my_id"
@@ -333,7 +344,8 @@ more information, see http://www.fsf.org/licenses/gpl.txt
         </simpara>
     </xsl:template>
     <xsl:template name="document-info-appendix">
-        <xsl:if test="count(fb:description/fb:document-info)">
+        <xsl:if
+            test="count(fb:description/fb:document-info) and count(fb:description/fb:document-info/*)">
             <xsl:for-each select="fb:description/fb:document-info">
                 <xsl:call-template name="document-info-appendix-wrk"/>
             </xsl:for-each>
@@ -457,7 +469,8 @@ more information, see http://www.fsf.org/licenses/gpl.txt
         <xsl:apply-templates select="fb:history/*"/>
     </xsl:template>
     <xsl:template name="publish-info-appendix">
-        <xsl:if test="count(fb:description/fb:publish-info)">
+        <xsl:if
+            test="count(fb:description/fb:publish-info) and count(fb:description/fb:publish-info/*)">
             <xsl:for-each select="fb:description/fb:publish-info">
                 <xsl:call-template name="publish-info-appendix-wrk"/>
             </xsl:for-each>
@@ -540,7 +553,8 @@ more information, see http://www.fsf.org/licenses/gpl.txt
         </appendix>
     </xsl:template>
     <xsl:template name="custom-info-appendix">
-        <xsl:if test="count(fb:description/fb:custom-info)">
+        <xsl:if
+            test="count(fb:description/fb:custom-info) and count(fb:description/fb:custom-info/*)">
             <appendix id="{concat('custom-info-appendix', generate-id())}">
                 <xsl:for-each select="fb:description/fb:custom-info[1]">
                     <title>
