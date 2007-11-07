@@ -82,11 +82,11 @@ sub ConvertFromComments
       if ($_->nodeType == XML_COMMENT_NODE)
       {
         my $node=$_;
-        if ( $node->data()=~/^\s*$keyword(.*)/ )
+        if ( $node->data()=~/^\s*$keyword(.*)/s )
 	{
 	  my $text=$1;
 	  my $number = int(rand(10000));
-	  if ($use_number && ($text=~/^(\d+)\s+(.*)$/) )
+	  if ($use_number && ($text=~/^(\d+)\s+(.*)$/s) )
 	  {
 	    $text = $2;
 	    $number = $1;
