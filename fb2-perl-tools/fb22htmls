@@ -1,0 +1,38 @@
+#!/usr/bin/perl
+
+use FB2ToManyHTML;
+
+my $Mute=0;
+my $SectionSize=30000;
+my $MinSectionSize=20000;
+#=============================================================
+if (!$ARGV[2]){print "\nkolbasorezka.pl by GribUser v 0.01\nUsage:\n\nkolbasorezka.pl <inputfile.fb2> <stylesheet.xsl> <outputfile> [-options]
+
+  outputfile name will be used to create new files.
+  outputfile_page#.html files will be created
+
+  Options available
+   -mute              Do not print progress messages.
+   -partsize <number> Set part size (default is $SectionSize)
+   -minsize <number>  Set minimum part size (default is $MinSectionSize)
+
+";exit 0;}
+#=============================================================
+
+my $FileToParce=$ARGV[0];
+my $StyleSheet=$ARGV[1];
+my $OutFileName=$ARGV[2];
+for (my $I=3;$I<@ARGV;$I++){
+	$Mute=1 if $ARGV[$I] eq '-mute';
+	if ($ARGV[$I] eq '-partsize'){
+		$SectionSize=$ARGV[$I+1] if $ARGV[$I+1];
+		$I++;
+	}
+	if ($ARGV[$I] eq '-minsize'){
+		$MinSectionSize=$ARGV[$I+1] if $ARGV[$I+1];
+		$I++;
+	}
+
+}
+
+FB2ToManyHTML::Kolbasim($FileToParce,$StyleSheet,$OutFileName,$SectionSize,$MinSectionSize,$Mute);
