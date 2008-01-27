@@ -1,12 +1,44 @@
 #!/usr/bin/perl
 
-use FB2ToManyHTML;
+# Copyright (c) 2004 Dmitry Gribov (GribUser),
+#               2008 Nikolay Shaplov
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. The name of the author may not be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+use fb2::Convert::Htmls;
+use strict;
+
+my $xsl_file=$ENV{FB2_PERL_TOOLS};
+$xsl_file.="/" if $xsl_file && $xsl_file =~ /[^\/]$/;
+$xsl_file.="XSL/fb22htmls.xsl";
 
 my $Mute=0;
 my $SectionSize=30000;
 my $MinSectionSize=20000;
 #=============================================================
-if (!$ARGV[2]){print "\nkolbasorezka.pl by GribUser v 0.01\nUsage:\n\nkolbasorezka.pl <inputfile.fb2> <stylesheet.xsl> <outputfile> [-options]
+if (!$ARGV[1]){print "\nkolbasorezka.pl by GribUser v 0.01\nUsage:\n\nkolbasorezka.pl <inputfile.fb2> <outputfile> [-options]
 
   outputfile name will be used to create new files.
   outputfile_page#.html files will be created
@@ -20,9 +52,8 @@ if (!$ARGV[2]){print "\nkolbasorezka.pl by GribUser v 0.01\nUsage:\n\nkolbasorez
 #=============================================================
 
 my $FileToParce=$ARGV[0];
-my $StyleSheet=$ARGV[1];
-my $OutFileName=$ARGV[2];
-for (my $I=3;$I<@ARGV;$I++){
+my $OutFileName=$ARGV[1];
+for (my $I=2;$I<@ARGV;$I++){
 	$Mute=1 if $ARGV[$I] eq '-mute';
 	if ($ARGV[$I] eq '-partsize'){
 		$SectionSize=$ARGV[$I+1] if $ARGV[$I+1];
@@ -35,4 +66,4 @@ for (my $I=3;$I<@ARGV;$I++){
 
 }
 
-FB2ToManyHTML::Kolbasim($FileToParce,$StyleSheet,$OutFileName,$SectionSize,$MinSectionSize,$Mute);
+fb2::Convert::Htmls::Kolbasim($FileToParce,$xsl_file,$OutFileName,$SectionSize,$MinSectionSize,$Mute);
