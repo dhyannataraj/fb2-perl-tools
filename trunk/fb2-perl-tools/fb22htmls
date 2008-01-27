@@ -28,42 +28,54 @@
 
 
 use fb2::Convert::Htmls;
+use Getopt::Long qw(HelpMessage VersionMessage);
 use strict;
+
+our $VERSION = 0.02;
 
 my $xsl_file=$ENV{FB2_PERL_TOOLS};
 $xsl_file.="/" if $xsl_file && $xsl_file =~ /[^\/]$/;
 $xsl_file.="XSL/fb22htmls.xsl";
 
+
 my $Mute=0;
 my $SectionSize=30000;
 my $MinSectionSize=20000;
-#=============================================================
-if (!$ARGV[1]){print "\nkolbasorezka.pl by GribUser v 0.01\nUsage:\n\nkolbasorezka.pl <inputfile.fb2> <outputfile> [-options]
+my $OutFileName = '';
 
-  outputfile name will be used to create new files.
-  outputfile_page#.html files will be created
+#=============================================================
+if (! @ARGV) { print "
+FB2 to HTMLs convertor v$VERSION
+Usage:
+
+fb22html  [-options] <inputfile.fb2>
 
   Options available
-   -mute              Do not print progress messages.
-   -partsize <number> Set part size (default is $SectionSize)
-   -minsize <number>  Set minimum part size (default is $MinSectionSize)
+   --mute		  Do not print progress messages.
+   --partsize=<number>	  Set part size (default is $SectionSize)
+   --minsize=<number>  	  Set minimum part size (default is $MinSectionSize)
+   --outfile=<file_name>  Base name for output htmls (default is infputfile stripped of .fb2 or .xml extentions)
+
+  outfile name will be used to create new files.
+  outfile_<page#>.html files will be created
 
 ";exit 0;}
 #=============================================================
 
-my $FileToParce=$ARGV[0];
-my $OutFileName=$ARGV[1];
-for (my $I=2;$I<@ARGV;$I++){
-	$Mute=1 if $ARGV[$I] eq '-mute';
-	if ($ARGV[$I] eq '-partsize'){
-		$SectionSize=$ARGV[$I+1] if $ARGV[$I+1];
-		$I++;
-	}
-	if ($ARGV[$I] eq '-minsize'){
-		$MinSectionSize=$ARGV[$I+1] if $ARGV[$I+1];
-		$I++;
-	}
 
+GetOptions ( help=>sub {HelpMessage(); },
+             version=>sub {VersionMessage(); },
+             "mute" => \$Mute,
+             'partsize=i' => \$SectionSize,
+             'minsize=i'=> \$MinSectionSize,
+	     'outfile=s'=> \$OutFileName
+	    );
+my $FileToParce = shift @ARGV;
+
+if (!$OutFileName)
+{
+  $OutFileName = $FileToParce;
+  $OutFileName =~ s/\.xml|\.fb2$//i;
 }
 
 fb2::Convert::Htmls::Kolbasim($FileToParce,$xsl_file,$OutFileName,$SectionSize,$MinSectionSize,$Mute);
