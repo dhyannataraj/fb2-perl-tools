@@ -109,6 +109,7 @@ my $Title;	    # title
 my $Author;
 my $report_styles;  # styles
 my %sect_styles;    # styles to use as sections
+my %images;
 
 # fetch options
 my %options;
@@ -352,6 +353,38 @@ sub add_section {
   push(@elist,[ $depth, $txt ]);
 }
 
+sub add_image {
+  my ($src) = shift;
+
+  if( -f $src ) {
+    unless( defined $images{$src} ) {
+      unless( $src =~ /\.(jpe?g)$/i ) {
+        my $new = $src;
+        $new =~ s/\.\w+$/\.jpg/;
+
+        if( system(qq{convert "$src" "$new"}) == 0 ) {
+          $src = $new;
+        } else {
+          print STDERR "Can`t convert image $src\n";
+          return; # :-(
+        }
+      }
+      use MIME::Base64;
+      my $data;
+
+      open INPUT, "<$src" or die "Can`t open image: $!";
+      binmode INPUT;
+      $data .= $_ while <INPUT>;
+      close INPUT;
+
+      $data = encode_base64( $data );
+      $images{$src} = $data;
+    }
+    pbreak;
+    $textbuf .= "<image xlink:href=\"#$src\" />";
+  }
+}
+
 sub get_styles {
   my $styles=$_[0]->attr('style');
   return () unless $styles;
@@ -460,6 +493,10 @@ sub element {
       --$strong;
       checkhl;
       return;
+   } elsif ($t eq 'img') {
+     my $src = $elem->attr('src');
+	 add_image( $src );
+	 return;
     } elsif ($t eq "a") {
       my $href=$elem->attr('href');
       my $name=$elem->attr('name');
@@ -629,6 +666,7 @@ sub remove_empty_sections {
   }
 }
 remove_empty_sections($root);
+
 print STDERR "done.\n";
 
 print STDERR "Writing XML... " unless $print_toc;
@@ -726,10 +764,16 @@ if (!($root->{type} && $root->{type} eq 'p') && (!defined($root->{title}) ||
   section($root);
 }
 
-print $outfile <<EOF ;
-  </body>
-</FictionBook>
-EOF
+print $outfile "\n</body>\n";
+
+if( scalar(keys %images) > 0 ) {
+  foreach(keys %images)  {
+    print $outfile qq{<binary content-type="image/jpeg" id="$_">$images{$_}</binary>\n};
+  }
+}
+
+print $outfile "\n</FictionBook>\n";
+
 print STDERR "done.\n" unless $print_toc;
 
 exit 0;
