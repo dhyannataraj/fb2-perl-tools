@@ -12,7 +12,7 @@ Options:
      -v              display progressbar
 File name '-' means standard input/output.
 '''
-__author__ = 'Serhiy Storchaka <storchaka@sourceforge.net>'
+__author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
 __version__ = '0.1'
 __all__ = []
 
