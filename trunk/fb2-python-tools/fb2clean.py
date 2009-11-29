@@ -3,17 +3,19 @@
 
 '''\
 Usage:
-     fb2clean.py [<options>] [<fb2-files>]
+     fb2clean.py [options] [fb2-files]
+
 Options:
-     -h              display this help message and exit
-     -V              display the version and exit
-     -k              create backup files
-     -@ <file>       read file names from file (one name per line)
-     -v              display progressbar
-File name '-' means standard input/output.
+     -h, --help       display this help message and exit
+     -V, --version    display the version and exit
+     -k, --backup     create backup files
+     -@ FILE          read file names from FILE (one name per line)
+     -v, --progress   display progressbar
+
+File name '-' means standard input.
 '''
 __author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
-__version__ = '0.1'
+__version__ = '0.2'
 __all__ = []
 
 import re
@@ -107,20 +109,21 @@ def writexml( doc, writer, encoding ):
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt( sys.argv[1:], '@:hkqtvV' )
+		opts, args = getopt.getopt( sys.argv[1:], '@:hkqtvV',
+			['backup', 'help', 'progress', 'version'] )
 	except getopt.GetoptError, err:
 		print >>sys.stderr, 'Error:', err
-		sys.exit(2)
+		sys.exit( 2 )
 
 	keepBackup = False
 	backupSuffix = '.bak'
 	verbose = False
 
 	for option, value in opts:
-		if option == '-h':
-			print __doc__
+		if option in ('-h', '--help'):
+			sys.stdout.write( __doc__ )
 			sys.exit( 0 )
-		elif option == '-V':
+		elif option in ('-V', '--version'):
 			print __version__
 			sys.exit( 0 )
 		elif option == '-@':
@@ -128,14 +131,14 @@ if __name__ == '__main__':
 				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
 			else:
 				args.extend( line.rstrip( '\n' ) for line in open( value ) )
-		elif option == '-k':
+		elif option in ('-k', '--backup'):
 			keepBackup = True
-		elif option == '-v':
+		elif option in ('-v', '--progress'):
 			verbose = True
 
 	if verbose:
 		import progress_display
-		args = progress_display.progress_iter( args, os.path.basename, sys.stderr )
+		args = progress_display.progress_iter( args )
 
 	global filename
 	for filename in args:
@@ -160,5 +163,5 @@ if __name__ == '__main__':
 		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception, err:
-			print >>sys.stderr, 'Error processing %s:' % filename
+			print >>sys.stderr, 'Error processing "%s":' % filename
 			print >>sys.stderr, err
