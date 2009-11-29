@@ -3,20 +3,22 @@
 
 '''\
 Usage:
-     fb2maketree.py [<options>] [<fb2-files>]
+     fb2maketree.py [options] [fb2-files]
+
 Options:
-     -h                   display this help message and exit
-     -V                   display the version and exit
-     -f <format>          use tree format (translators, authors, authors-src, series, genres)
-     -o, --output <dir>   tree base directory
-     -s                   make symbolic links instead of hard links
-     -@ <file>            read file names from file (one name per line)
-     -v                   display progressbar
-File name '-' means standard input/output.
+     -h, --help                   display this help message and exit
+     -V, --version                display the version and exit
+     -f FORMAT, --format=FORMAT   use tree format (authors, authors-src, series, genres, translators, date)
+     -o DIR, --output DIR         tree base directory
+     -s, --symbolic               make symbolic links instead of hard links
+     -@ FILE                      read file names from FILE (one name per line)
+     -v, --progress               display progressbar
+
+File name '-' means standard input.
 '''
 
 __author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
-__version__ = '0.1'
+__version__ = '0.2'
 __all__ = []
 
 try:
@@ -29,14 +31,6 @@ import sys, xml.etree.ElementTree, re, getopt, os, os.path, filecmp
 filesystemencoding = sys.getfilesystemencoding()
 # filesystemencoding = 'utf-8'
 
-def get_text( node ):
-	if node is None:
-		return ''
-	text = node.text
-	if text is None:
-		return ''
-	return text.strip()
-
 def genname( dirname, filename, otherpath = None ):
 	filename = filename.replace( '"', "'" )
 	filename = filename.replace( ':', '.' )
@@ -46,16 +40,18 @@ def genname( dirname, filename, otherpath = None ):
 	try:
 		if not os.path.exists( dirname ):
 			os.makedirs( dirname )
-	except os.error, e:
-		print >>sys.stderr, e
+	except os.error, err:
+		print >>sys.stderr, err
 		pass
 	count = 0
 	path = os.path.join( dirname, filename )
 	while os.access( path, os.F_OK ):
-		if otherpath and filecmp.cmp( path, otherpath, 0 ):
-# 		if data and os.path.getsize( path ) == len( data ) and open( path ).read() == data:
-			print '#', path.encode( filesystemencoding )
-			return None
+		if otherpath:
+			if os.path.samefile( path, otherpath ):
+				return None
+			if filecmp.cmp( path, otherpath, 0 ):
+				print '#', path.encode( filesystemencoding )
+				return None
 		count += 1
 		path = os.path.join( dirname, '%s__%d%s' % (basename, count, suffix) )
 	if count > 0:
@@ -66,48 +62,44 @@ def mklink( src, dst ):
 	try:
 		os.link( src, dst )
 	except OSError, err:
-		os.symlink( src, dst )
 		print '@', dst.encode( filesystemencoding )
+		os.symlink( src, dst )
 
-def linkauthors( basedir, authornames, book_title, fb2name ):
-	if len( authornames ) > 4:
-		authornames_str = ', '.join( authornames[:4] ) + u',..'
-	else:
-		authornames_str = ', '.join( authornames )
+def linkauthors( path, authornames, book_title ):
+	if len( authornames ) > 1:
+		(dirname, filename) = os.path.split( path )
+		(basedir, dirname) = os.path.split( dirname )
+		mainname = os.path.join( '..', dirname, filename )
+		for authorname in authornames:
+			os.symlink( mainname, genname( os.path.join( basedir, authorname ), book_title + '.fb2' ) )
 
-	path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', fb2name )
-	if path:
-		mklink( os.path.abspath( fb2name ), path )
-		if len( authornames ) > 1:
-			mainname = os.path.join( '..', authornames_str, os.path.basename( path ) )
-			for authorname in authornames:
-				os.symlink( mainname, genname( os.path.join( basedir, authorname ), book_title + '.fb2' ) )
+def getauthorname( author ):
+	first_name = author.findtext( 'first-name' )
+	last_name = author.findtext( 'last-name' )
+	middle_name = author.findtext( 'middle-name' )
+	authorname = ' '.join( [name for name in [last_name, first_name, middle_name] if name] )
+	nickname = author.findtext( 'nickname' )
+	if nickname:
+		authorname += ' [%s]' % nickname
+	return authorname
 
 xml_re = re.compile( r'<\?xml version="(?:[^">]*)" encoding="(?:[^">]*)"\?>', re.DOTALL )
 desc_re = re.compile( r'<description>.*?</description>', re.DOTALL )
-def parse( data ):
-	return xml.dom.minidom.parseString(
-		xml_re.match( data ).group() +
-		desc_re.search( data ).group().
-		replace( 'xlink:href=', 'href=' ).
-		replace( 'l:href=', 'href=' )
-	)
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt( sys.argv[1:], '@:hf:o:svV', ['output='] )
-	except getopt.GetoptError:
-		# print help information and exit:
-		print >>sys.stderr, 'Illegal option'
+		opts, args = getopt.getopt( sys.argv[1:], '@:hf:o:svV', ['help', 'format=', 'output=', 'symbolic', 'version', 'progress'] )
+	except getopt.GetoptError, err:
+		print >>sys.stderr, 'Error:', err
 		sys.exit( 2 )
 	outputdir = '.'
 	verbose = False
 	format = None
 	for option, value in opts:
-		if option == '-h':
-			print __doc__
+		if option in ('-h', '--help'):
+			sys.stdout.write( __doc__ )
 			sys.exit( 0 )
-		elif option == '-V':
+		elif option in ('-V', '--version'):
 			print __version__
 			sys.exit( 0 )
 		elif option == '-@':
@@ -115,128 +107,114 @@ if __name__ == '__main__':
 				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
 			else:
 				args.extend( line.rstrip( '\n' ) for line in open( value ) )
-		elif option == '-v':
+		elif option in ('-v', '--progress'):
 			verbose = True
-		elif option == '-f':
+		elif option in ('-f', '--format'):
 			format = value
 		elif option in ('-o', '--output'):
 			outputdir = value
-		elif option == '-s':
+		elif option in ('-s', '--symbolic'):
 			mklink = os.symlink
 
 	if verbose:
 		import progress_display
-		args = progress_display.progress_iter( args, os.path.basename, sys.stderr )
+		args = progress_display.progress_iter( args )
 
 	for fb2name in args:
+		srcpath = os.path.abspath( fb2name )
 		#if verbose:
 		#	print fb2name
-		f = file( fb2name )
-		data = ''
-		while True:
-			data += f.read( 1 << 13 )
+		try:
+			f = open( srcpath )
+			data = ''
+			while True:
+				data += f.read( 1 << 13 )
+				try:
+					doc = xml_re.match( data ).group() + '\n' + desc_re.search( data ).group()
+				except AttributeError:
+					continue
+				break
+			f.close()
+			doc = doc.replace( 'xlink:href=', 'href=' ).replace( 'l:href=', 'href=' )
+
 			try:
-				doc = xml_re.match( data ).group() + '\n' + desc_re.search( data ).group()
-			except AttributeError:
-				continue
-			break
-		f.close()
-		doc = doc.replace( 'xlink:href=', 'href=' ).replace( 'l:href=', 'href=' )
+				description = xml.etree.ElementTree.fromstring( doc )
+			except:
+				print doc
+				raise
 
-		try:
-			description = xml.etree.ElementTree.fromstring( doc )
-		except:
-			print description
-			raise
+			title_info = description.find( 'title-info' )
 
-		title_info = description.find( 'title-info' )
+			authornames = [getauthorname( author ) for author in title_info.findall( 'author' )]
+			translatornames = [getauthorname( author ) for author in title_info.findall( 'translator' )]
 
-		authornames = []
-		for author in title_info.findall( 'author' ):
-			first_name = get_text( author.find( 'first-name' ) )
-			last_name = get_text( author.find( 'last-name' ) )
-			authorname = [last_name, first_name] + [get_text( middle_name ) for middle_name in author.findall( 'middle-name' )]
-			authorname = ' '.join( [name for name in authorname if name] )
-			nickname = get_text( author.find( 'nickname' ) )
-			if nickname:
-				authorname += ' [%s]' % nickname
-			authornames.append( authorname )
-		translatornames = []
-		for author in title_info.findall( 'translator' ):
-			first_name = get_text( author.find( 'first-name' ) )
-			last_name = get_text( author.find( 'last-name' ) )
-			authorname = [last_name, first_name] + [get_text( middle_name ) for middle_name in author.findall( 'middle-name' )]
-			authorname = ' '.join( [name for name in authorname if name] )
-			nickname = get_text( author.find( 'nickname' ) )
-			if nickname:
-				authorname += ' [%s]' % nickname
-			translatornames.append( authorname )
+			book_title = title_info.findtext( 'book-title' )
+			lang = title_info.findtext( 'lang' )
+			src_lang = title_info.findtext( 'src-lang' )
+
+			genres = [genre.text for genre in title_info.findall( 'genre' )]
+			sequences = [(sequence.get( 'name' ), sequence.get( 'number' ), sequence.get( 'src-name' )) for sequence in title_info.findall( 'sequence' )]
 
 
-		book_title = get_text( title_info.find( 'book-title' ) )
-		lang = get_text( title_info.find( 'lang' ) )
-		srclang = get_text( title_info.find( 'src-lang' ) ) or os.path.join( 'unknown', lang )
+			if len( authornames ) > 4:
+				authornames_str = ', '.join( authornames[:4] ) + ',..'
+			else:
+				authornames_str = ', '.join( authornames )
 
-		genres = [get_text( genre ) for genre in title_info.findall( 'genre' )]
-		sequences = [(sequence.get( 'name' ), sequence.get( 'number' ), sequence.get( 'src-name' )) for sequence in title_info.findall( 'sequence' )]
+			if len( book_title ) > 120:
+				book_title = book_title[:120] + '...'
 
-
-		#print ('%s "%s"' % (', '.join( authornames ), book_title)).ljust(50)[:50].encode( filesystemencoding ),
-
-		if len( authornames ) > 4:
-			authornames_str = ', '.join( authornames[:4] ) + u',..'
-		else:
-			authornames_str = ', '.join( authornames )
-
-		try:
-			if format == 'translators':
-				basedir = outputdir.decode( filesystemencoding )
-				for authorname in translatornames:
-					os.symlink( os.path.abspath( fb2name ), genname( os.path.join( basedir, authorname ), book_title + '.fb2' ) )
 			if format == 'authors':
-				basedir = os.path.join( outputdir.decode( filesystemencoding ), lang )
-				path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', fb2name )
+				basedir = os.path.join( outputdir, lang )
+				path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', srcpath )
 				if path:
-					mklink( os.path.abspath( fb2name ), path )
-					if len( authornames ) > 1:
-						mainname = os.path.join( '..', authornames_str, os.path.basename( path ) )
-						for authorname in authornames:
-							os.symlink( mainname, genname( os.path.join( basedir, authorname ), book_title + '.fb2' ) )
-			if format == 'authors-src':
-				basedir = os.path.join( outputdir.decode( filesystemencoding ), srclang )
-				path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', fb2name )
+					mklink( srcpath, path )
+					linkauthors( path, authornames, book_title )
+			elif format == 'authors-src':
+				basedir = os.path.join( outputdir, src_lang or lang )
+				path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', srcpath )
 				if path:
-					mklink( os.path.abspath( fb2name ), path )
-					if len( authornames ) > 1:
-						mainname = os.path.join( '..', authornames_str, os.path.basename( path ) )
-						for authorname in authornames:
-							os.symlink( mainname, genname( os.path.join( basedir, authorname ), book_title + '.fb2' ) )
-			if format == 'series':
+					mklink( srcpath, path )
+					linkauthors( path, authornames, book_title )
+			elif format == 'series':
 				for sequence_name, sequence_number, sequence_src_name in sequences:
+					dirname = sequence_name
 					if sequence_src_name:
-						path0 = os.path.join( outputdir, lang, ( '%s [%s] : %s' % ( sequence_name, sequence_src_name, authornames_str ) )[:120] )
-					else:
-						path0 = os.path.join( outputdir, lang, ( '%s : %s' % ( sequence_name, authornames_str ) )[:120] )
-			#		path0 = os.path.join( outputdir, lang, sequence_name, authornames_str )
-					if sequence_number != '':
-						path = genname( path0, '%s. %s.fb2' % ( sequence_number, book_title ), fb2name )
-					else:
-						path = genname( path0, '%s.fb2' % book_title, fb2name )
+						dirname += ' [%s]' % sequence_src_name
+					dirname += ' : ' + authornames_str
+					filename = book_title + '.fb2'
+					if sequence_number:
+						filename = sequence_number + '. ' + filename
+					path = genname( os.path.join( outputdir, lang, dirname[:120] ), filename, srcpath )
 					if path:
-						mklink( os.path.abspath( fb2name ), path )
-			if format == 'genres':
-				for genre in genres:
+						mklink( srcpath, path )
+			elif format == 'genres':
+				for genre in genres or ('?'):
 					basedir = os.path.join( outputdir, lang, genre )
-					path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', fb2name )
+					path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', srcpath )
 					if path:
-						mklink( os.path.abspath( fb2name ), path )
-						mainname = os.path.join( '..', authornames_str, os.path.basename( path ) )
-						if len( authornames ) > 1:
-							for authorname in authornames:
-								os.symlink( mainname, genname( os.path.join( basedir, authorname ), book_title + '.fb2' ) )
+						mklink( srcpath, path )
+						linkauthors( path, authornames, book_title )
+			elif format == 'translators':
+				basedir = outputdir
+				if not translatornames and lang != src_lang:
+					translatornames = ('?')
+				for authorname in translatornames:
+					mklink( srcpath, genname( os.path.join( basedir, authorname ), ( authornames_str + '. ' + book_title )[:120] + '.fb2' ) )
+			elif format == 'date':
+				date = title_info.find( 'date' )
+				if date is not None:
+					date_str = date.text or '?'
+					if date.get( 'value' ):
+						date_str += ' [%s]' % date.get( 'value' )
+				date_str = date_str or '?'
+				basedir = os.path.join( outputdir, date_str )
+				path = genname( os.path.join( basedir, authornames_str ), book_title + '.fb2', srcpath )
+				if path:
+					mklink( srcpath, path )
 		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception, err:
-			print >>sys.stderr, 'Error processing %s:' % fb2name
+			print >>sys.stderr, 'Error processing "%s":' % fb2name
 			print >>sys.stderr, err
 			sys.exit( 1 )
