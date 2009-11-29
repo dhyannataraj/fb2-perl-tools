@@ -3,22 +3,24 @@
 
 '''\
 Usage:
-     fb2format.py [<options>] [<fb2-files>]
+     fb2format.py [options] [fb2-files]
+
 Options:
-     -h              display this help message and exit
-     -V              display the version and exit
-     -e <encoding>   output in the given encoding
-     -f              convert file to human readable format
-     -s              sqeeze file in one line
-     -b              sqeeze binaries in one line
-     -k              create backup files
-     -@ <file>       read file names from file (one name per line)
-     -v              display progressbar
-File name '-' means standard input/output.
+     -h, --help                        display this help message and exit
+     -V, --version                     display the version and exit
+     -e ENCODING, -encoding ENCODING   output in the given encoding
+     -f, --format                      convert file to human readable format
+     -s, --squeeze                     squeeze file in one line
+     -b, --squeeze-binaries            squeeze binaries in one line
+     -k, --backup                      create backup files
+     -@ FILE                           read file names from FILE (one name per line)
+     -v, --progress                    display progressbar
+
+File name '-' means standard input.
 '''
 
 __author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
-__version__ = '0.1'
+__version__ = '0.2'
 
 try:
 	import psyco
@@ -79,7 +81,8 @@ def fb2format( data, squeeze = False, squeezeBinary = False ):
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt( sys.argv[1:], '@:e:fhkstvV' )
+		opts, args = getopt.getopt( sys.argv[1:], '@:be:fhksvV',
+			['backup', 'encoding=', 'format', 'help', 'progress', 'squeeze', 'squeeze-binaries', 'version'] )
 	except getopt.GetoptError, err:
 		print >>sys.stderr, 'Error:', err
 		sys.exit( 2 )
@@ -93,10 +96,10 @@ if __name__ == '__main__':
 	verbose = False
 
 	for option, value in opts:
-		if option == '-h':
-			print __doc__
+		if option in ('-h', '--help'):
+			sys.stdout.write( __doc__ )
 			sys.exit( 0 )
-		elif option == '-V':
+		elif option in ('-V', '--version'):
 			print __version__
 			sys.exit( 0 )
 		elif option == '-@':
@@ -104,18 +107,18 @@ if __name__ == '__main__':
 				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
 			else:
 				args.extend( line.rstrip( '\n' ) for line in open( value ) )
-		elif option == '-e':
+		elif option in ('-e', '--encoding'):
 			forceEncoding = value
-		elif option == '-k':
+		elif option in ('-k', '--backup'):
 			keepBackup = True
-		elif option == '-f':
+		elif option in ('-f', '--format'):
 			format = True
-		elif option == '-s':
+		elif option in ('-s', '--squeeze'):
 			format = True
 			squeeze = True
-		elif option == '-b':
+		elif option in ('-b', '--squeeze-binaries'):
 			squeezeBinary = True
-		elif option == '-v':
+		elif option in ('-v', '--progress'):
 			verbose = True
 
 	if verbose:
@@ -151,5 +154,5 @@ if __name__ == '__main__':
 		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception, err:
-			print >>sys.stderr, 'Error processing %s:' % filename
+			print >>sys.stderr, 'Error processing "%s":' % filename
 			print >>sys.stderr, err

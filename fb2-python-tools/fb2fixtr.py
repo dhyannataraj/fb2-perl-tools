@@ -2,23 +2,26 @@
 # -*- coding: UTF-8 -*-
 
 '''\
-Fix some popular OCR and conversion errors in FictionBook2 files.
+Fix some frequent OCR and conversion errors in FictionBook2 files.
 
 Usage:
-     fb2fixtr.py [<options>] [<fb2-files>]
+     fb2fixtr.py [options] [fb2-files]
+
 Options:
-     -h              display this help message and exit
-     -V              display the version and exit
-     -k              create backup files
-     -@ <file>       read file names from file (one name per line)
-     -q              quick but use more memory
-     -T              process plain text
-     -v              display progressbar
-     -o logfile      log all fixes to logfile
-File name '-' means standard input/output.
+     -h, --help                   display this help message and exit
+     -V, --version                display the version and exit
+     -k, --backup                 create backup files
+     -@ FILE                      read file names from FILE (one name per line)
+     -q, --quick                  quick but use more memory
+     -T, --text                   process plain text
+     -v, --progress               display progressbar
+     -o FILE, --log-file FILE     log all fixes to FILE
+     -d FILE, --dictionary FILE   use dictionary from FILE
+
+File name '-' means standard input.
 '''
 __author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
-__version__ = '0.1'
+__version__ = '0.2'
 __all__ = []
 
 import string, re
@@ -338,10 +341,11 @@ def writexml( doc, writer, encoding ):
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt( sys.argv[1:], '@:d:hko:qTvV' )
+		opts, args = getopt.getopt( sys.argv[1:], '@:d:hko:qTvV',
+			['backup', 'dictionary=', 'help', 'log-file', 'progress', 'quick', 'text', 'version'] )
 	except getopt.GetoptError, err:
 		print >>sys.stderr, 'Error:', err
-		sys.exit(2)
+		sys.exit( 2 )
 
 	keepBackup = False
 	backupSuffix = '.bak'
@@ -349,10 +353,10 @@ if __name__ == '__main__':
 	plainText = False
 
 	for option, value in opts:
-		if option == '-h':
-			print __doc__
+		if option in ('-h', '--help'):
+			sys.stdout.write( __doc__ )
 			sys.exit( 0 )
-		elif option == '-V':
+		elif option in ('-V', '--version'):
 			print __version__
 			sys.exit( 0 )
 		elif option == '-@':
@@ -360,22 +364,22 @@ if __name__ == '__main__':
 				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
 			else:
 				args.extend( line.rstrip( '\n' ) for line in open( value ) )
-		elif option == '-k':
+		elif option in ('-k', '--backup'):
 			keepBackup = True
-		elif option == '-q':
+		elif option in ('-q', '--quick'):
 			quick = True
-		elif option == '-v':
+		elif option in ('-v', '--progress'):
 			verbose = True
-		elif option == '-T':
+		elif option in ('-T', '--text'):
 			plainText = True
-		elif option == '-o':
+		elif option in ('-o', '--log-file'):
 			logfile = open( value, 'w' )
-		elif option == '-d':
+		elif option in ('-d', '--dictionary'):
 			read_trdict( value )
 
 	if verbose:
 		import progress_display
-		args = progress_display.progress_iter( args, os.path.basename, sys.stderr )
+		args = progress_display.progress_iter( args )
 
 	global filename
 	for filename in args:
@@ -414,7 +418,7 @@ if __name__ == '__main__':
 		except (KeyboardInterrupt, SystemExit):
 			raise
 		except Exception, err:
-			print >>sys.stderr, 'Error processing %s:' % filename
+			print >>sys.stderr, 'Error processing "%s":' % filename
 			print >>sys.stderr, err
 			raise
 
