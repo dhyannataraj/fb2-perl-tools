@@ -5,7 +5,7 @@ use fb2::Footnotes;
 use XML::LibXML;
 use Encode;
 use Getopt::Long qw(HelpMessage VersionMessage);
-our $VERSION=0.01;
+our $VERSION=0.02;
 
 =head1 NAME
 
@@ -16,6 +16,8 @@ fb2_notes - manipulate footnotes in the fb2 e-book
 B<fb2_notes> B<convert> [B<-k>=I<keyword>] [B<-n>=[I<1>|I<0>]] I<filename.fb2>
 
 B<fb2_notes> B<convert> <I<src_file.fb2> >I<dst_file.fb2>
+
+B<fb2_notes> B<renumber> <I<src_file.fb2> >I<dst_file.fb2>
 
 =head1 DESCRIPTION
 
@@ -50,6 +52,12 @@ If B<use-number> is set to 1, than a number after B<keyword> will be used as a n
 Default value is 1.
 
 =back
+
+
+=item B<renumber>
+
+Reorder footnotes according to the order of the footnotes links in main body. Footnote's title and link's text
+are changed to the index number of each footnote in a new list. Footnote ids are remain unchanged.
 
 =back
 
@@ -89,15 +97,15 @@ http://www.fictionbook.org/index.php/Eng:FictionBook - fb2 community (site is mo
  
 =head1 AUTHOR
 
-Nikolay Shaplov <N@Shaplov.ru>
+Swami Dhyan Nataraj (Nikolay Shaplov) <N@Shaplov.ru>
 
 =head1 VERSION
 
-0.01
+0.02
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2007 by Nikolay Shaplov
+Copyright 2007,2010 by Swami Dhyan Nataraj (Nikolay Shaplov)
 
 This library is free software; you can redistribute it and/or modify
 it under the terms of the General Public License (GPL).  For
@@ -108,6 +116,7 @@ more information, see http://www.fsf.org/licenses/gpl.txt
 my $Command = shift @ARGV;
 
 do_convert()	if $Command eq 'convert';
+do_renumber()	if $Command eq 'renumber';
 HelpMessage()	if ! $Command || $Command eq 'help';
 
 
@@ -155,6 +164,32 @@ sub do_convert
   } 
   
   print STDERR "Comments successfully converted\n";
+}
+
+
+sub do_renumber
+{
+  my $opts={};
+  GetOptions(
+    help		=> sub {HelpMessage(); },
+    version		=> sub {VersionMessage(); },
+    "keyword|w=s"	=> \$opts->{'keyword'},
+    "use-number|n"	=> \$opts->{'use_number'},
+  );
+  
+  my $file_name = $ARGV[0];
+  
+  my $doc;
+  
+  if ($file_name)
+  {
+    $doc = _parse_file($file_name);    
+  } else
+  {
+    $doc = _parse_stdin();
+  }
+  my $changes_flag = fb2::Footnotes::RenumberFootnotes($doc);
+  print $doc->toString();
 }
 
 sub _parse_file
