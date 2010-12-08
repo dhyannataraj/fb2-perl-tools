@@ -1,8 +1,9 @@
 package fb2::Footnotes;
 
-our $VERSION=0.01;
+our $VERSION=0.02;
 
 use strict;
+use warnings;
 use XML::LibXML;
 
 =head1 NAME
@@ -48,7 +49,7 @@ I<UseNumber> - If this option is true, B<ConvertFromComments> will take a number
 Default value is 1;
 
 =back
-			  
+
 
 =cut
 
@@ -99,6 +100,222 @@ sub ConvertFromComments
     }  
   }  
   return($changes_flag);
+}
+
+=cut
+
+=head2 RenumberFootnotes
+
+  fb2::Footnotes::RenumberFootnotes($document);
+
+Reorder footnotes in footnotes body according to the order of footnote links in the book's body. Each footnote will get new title according
+to it's position in this list; footnote links text will also be changed to each footnote index number. Meanwhile footnote ids are kept unchanged.
+If reorder were successful function returns 1, or 0 if something went wrong.
+
+I<$document> - Fb2 e-book stored as an XML::LibXML Document object
+
+
+=cut
+ 
+sub RenumberFootnotes
+{
+  my $doc = shift;
+  my $root = $doc->getDocumentElement();
+  my $note_body = undef;
+  
+  foreach my $node ($doc->getElementsByTagName('body'))
+  {
+    foreach ($node->attributes())
+    {
+       if ( ($_->nodeName eq 'name') && ($_->value eq 'notes')) 
+      {
+        # It's assumed that there is only one note-body in the book
+        if ($note_body)
+        {
+          warn "More then one footnote body in the document. Refusing renombering footnotes";
+          return 0;
+        }
+	$note_body  = $node;
+      }
+    }
+  }
+  if (! $note_body)
+  {
+    warn ("No footnote body found. No renumbering have been done");
+    return 0;
+  }
+  my %footnotes = ();
+  my @lost_foot_notes = ();
+  foreach my $section ($note_body->getChildrenByLocalName('*'))
+  {
+    if ($section->nodeName ne 'section')
+    {
+      warn "Unexpected node in footnote body:'".$section->nodeName."', aborting";
+      return 0;
+    }
+
+    my $id = $section->getAttribute('id');
+    my $fn_record = {content=>$section, prefix=>[]};
+    
+    # saving all non-element nodes that goes before each foonnote sections into prefix array in $fn_record
+    my $node = $section->previousSibling();
+    while ($node)
+    {
+      if ($node->nodeType != XML_ELEMENT_NODE)
+      {
+        push @{$fn_record->{prefix}}, $node;
+      } else
+      {
+        $node = undef;
+      }
+      $node=$node->previousSibling() if $node;
+    }
+    
+    if (! $id) # If we habe no id, we are trying to get footnote title for error message
+    {
+      # Trying to get title if any
+      my $title = "";
+      foreach my $title_node ($section->getChildrenByLocalName('title'))
+      {
+        foreach my $p_node ($title_node->getChildrenByLocalName('*'))
+        {
+          my $p_content = $p_node->firstChild;
+          while ($p_content)
+          {
+            $title.= $p_content->toString;
+            $p_content=$p_content->nextSibling
+          }
+        }
+      }
+      warn "Lost footnote (footnote withot id) found in section with title '$title'" if $title;
+      warn "Lost footnote (footnote withot id) found in section with no title" unless $title;
+      push @lost_foot_notes,$fn_record;
+    } else
+    {
+      $footnotes{$id} = $fn_record;
+    }
+  }
+
+  # Saving bottom of the footnite body to preserve formatting and comments, if any
+  my @bottom = ();
+  my $node =  $note_body->lastChild;
+  while ($node)
+  {
+    if ($node->nodeType != XML_ELEMENT_NODE)
+    {
+      unshift @bottom,$node;
+    } else
+    {
+      $node = undef;
+    }
+    $node = $node->previousSibling if $node;
+  }
+  
+  my @footnote_links = _recur_find_footnote_link($root);
+
+  
+  my $new_note_body = $doc->createElementNS("http://www.gribuser.ru/xml/fictionbook/2.0",'body');
+  $new_note_body->setAttribute( 'name','notes');
+  
+  my $i = 0;
+  foreach my $a_node (@footnote_links)
+  {
+    my $id = $a_node->getAttributeNS('http://www.w3.org/1999/xlink', 'href');;
+    if ($id =~s/^\#//)
+    {
+      unless ($footnotes{$id})
+      {
+        if (defined($footnotes{$id}))
+        {
+          warn "Footnote with id='$id' is linked twice or more";
+        } else
+        {
+          warn "Footnote with id='$id' does not exists but linked from the main body";
+        }
+      } else ## if note exists
+      {
+        while (@{$footnotes{$id}->{prefix}})
+        {
+          $new_note_body->appendChild(shift(@{$footnotes{$id}->{prefix}})->cloneNode(1));
+        }
+        $i++;
+        my $new_note = $footnotes{$id}->{content}->cloneNode(1);
+        my $insert_after = undef;
+        foreach ($new_note->getChildrenByTagName('title'))
+        {
+          unless (defined $insert_after)
+          {
+            $insert_after =$_->previousSibling
+          } else
+          {
+            $insert_after = 0;
+          }
+          $new_note->removeChild($_);
+        }
+        my $new_note_title = $doc->createElementNS("http://www.gribuser.ru/xml/fictionbook/2.0",'title');
+        $new_note_title->addNewChild("http://www.gribuser.ru/xml/fictionbook/2.0",'p')->appendText("[$i]");
+      
+        if ($insert_after)
+        {
+           $insert_after->parentNode->insertAfter($new_note_title,$insert_after);
+        } else
+        {
+          $new_note->insertBefore($new_note_title,$new_note->firstChild);
+        } 
+        $new_note_body->appendChild($new_note);
+        $footnotes{$id}=0;
+        $a_node->removeChildNodes();
+        $a_node->appendText("[$i]");
+      }
+    }
+  }
+  foreach (keys %footnotes)
+  {
+    if ($footnotes{$_})
+    {
+      push @lost_foot_notes, $footnotes{$_};
+      warn "Footnote with id ='$_' does not linked from the main body";
+    }
+  }
+  if (@lost_foot_notes)
+  {
+    $new_note_body->appendText("\n");
+    $new_note_body->appendChild($doc->createComment(' ======== Lost footnotes: footnotes without id, or footnotes not linked from the main body ========'));
+    foreach my $lost_fn_rec (@lost_foot_notes)
+    {
+      while (@{$lost_fn_rec->{prefix}})
+      {
+        $new_note_body->appendChild(shift(@{$lost_fn_rec->{prefix}})->cloneNode(1));
+      }
+      $new_note_body->appendChild($lost_fn_rec->{content}->cloneNode(1));
+    }
+  }
+  foreach (@bottom)
+  {
+    $new_note_body->appendChild($_->cloneNode(1));
+  }
+  $note_body->parentNode->insertBefore($new_note_body,$note_body);
+  $note_body->parentNode->removeChild($note_body);
+  
+  return 1; # FIXME 1 is retured even if no real changes were made (i.e. when renubering file that were already renumbered
+}
+
+sub _recur_find_footnote_link
+{
+  my $node = shift;
+  my @res = ();
+  if ( ($node->nodeType == XML_ELEMENT_NODE) && ($node->nodeName eq 'a') && $node->getAttribute('type') && ($node->getAttribute('type') eq 'note'))
+  {
+    return $node; # in note link found, we do not look futher
+  }
+  if ( $node->nodeType == XML_ELEMENT_NODE)
+  {
+    foreach my $n ($node->childNodes)
+    {
+      push @res, _recur_find_footnote_link($n);
+    }
+  }
+  return @res;
 }
 
 =head2 Add
@@ -152,7 +369,7 @@ sub Add
 	$note_body  = $node;
       }
     }
-  }  
+  }
   if (! $note_body)
   {
     $note_body = $doc->createElement('body');
@@ -160,7 +377,7 @@ sub Add
     $book->appendChild($doc->createTextNode('  '));
     $book->appendChild($note_body);
     $book->appendChild($doc->createTextNode("\n"));
-  }  
+  }
   
   my $section_node = $doc->createElement('section');
   $section_node->setAttribute('id',"note$number");
@@ -268,15 +485,15 @@ http://www.fictionbook.org/index.php/Eng:FictionBook - fb2 community (site is mo
  
 =head1 AUTHOR
 
-Nikolay Shaplov <N@Shaplov.ru>
+Swami Dhyan Nataraj (Nikolay Shaplov) <N@Shaplov.ru>
 
 =head1 VERSION
 
-0.01
+0.02
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2007 by Nikolay Shaplov
+Copyright 2007,2010 by Swami Dhyan Nataraj (Nikolay Shaplov)
 
 This library is free software; you can redistribute it and/or modify
 it under the terms of the General Public License (GPL).  For
