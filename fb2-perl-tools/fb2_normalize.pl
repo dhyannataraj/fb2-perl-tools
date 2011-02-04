@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
-use XML::DOM;
+use XML::LibXML;
 
 
 my @inline_elsments=('a', 'book-name', 'book-title', 'city', 'code', 'custom-info', 'date',   
@@ -17,8 +17,8 @@ foreach (@inline_elsments)
 }
 
 my $FileName= $ARGV[0];  
-my $parser = new XML::DOM::Parser;  
-my $root = $parser->parsefile($FileName)->getDocumentElement();
+my $parser = XML::LibXML->new();
+my $root = $parser->parse_file($FileName)->getDocumentElement();
 
 normalize_branch($root);
 print $root->toString();
@@ -29,16 +29,15 @@ sub normalize_branch
   my $level = shift;
   foreach ($branch->getChildNodes())
   {
-    normalize_text_node($_) if ($_->getNodeType()==TEXT_NODE);
+    normalize_text_node($_) if ($_->nodeType() == XML_TEXT_NODE);
   }
   my @children=$branch->getChildNodes();
-  
-  if (! $inline_elements_hash{$branch->getNodeName()} )
+  if (! $inline_elements_hash{$branch->nodeName()} )
   {
     my $count=1;
     foreach my $node (@children)
     {
-      if( !(($branch->getNodeName() eq 'section') && ($count==1) && ($node->getNodeName() eq 'title') ))
+      if( !(($branch->nodeName() eq 'section') && ($count==1) && ($node->nodeName() eq 'title') ))
       {
         my $new_node=$branch->getOwnerDocument()->createTextNode("\n  ".$level);
         $branch->insertBefore ($new_node,$node);
@@ -46,19 +45,18 @@ sub normalize_branch
       $count++;
     }
     my $new_node=$branch->getOwnerDocument()->createTextNode("\n".$level);
-    $branch->insertBefore ($new_node);
+    $branch->insertBefore ($new_node,undef); # adding as last node
   }
-  
   foreach (@children)
   {
-    normalize_branch($_,$level."  ") if ($_->getNodeType()== ELEMENT_NODE);
+    normalize_branch($_,$level."  ") if ($_->nodeType() == XML_ELEMENT_NODE);
   }
 }
   
 sub normalize_text_node
 {
   my $text_node=shift;
-  return 0 if ( $text_node->getNodeType()!=TEXT_NODE );
+  return 0 if ( $text_node->nodeType() != XML_TEXT_NODE );
   my $text=$text_node->getData();
   $text=~s/\s+/ /g;
   $text=~s/^ //g;
