@@ -77,15 +77,17 @@ I<stylespec>
 
 html2fb2 -b head -p 14,20 text.html
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Mike Matsnev <mike@po.cs.msu.su>
+Mike Matsnev <mike@po.cs.msu.su> (initial version)
+Nikolay Shaplov <n@shaplov.ru> (c) 2011
 
 =cut
 
 use strict;
 use warnings;
 use HTML::TreeBuilder;
+use CSS;
 use Getopt::Std;
 
 my $xmllib=$^O eq "MSWin32" ? "use Win32::OLE" : "use XML::LibXML";
@@ -94,6 +96,7 @@ if ($@) {
   print STDERR "No XML support found.\n";
   undef $xmllib;
 }
+my $css =  CSS->new();
 
 # global options
 my $minempty=1;	    # minimum number of empty paragraphs that
@@ -298,7 +301,26 @@ sub moretext {
     $txt =~ s/[<>]/$angbr{$1}/sg unless $_[0];
   }
   $txt =~ y/\t\r\n / /s; # also destroys nbsp
+  my $previous_space = $space;
+  $space = '';
   $space=' ' if $txt =~ /^\s/;
+#  if ($space && $previous_space)
+  if ($previous_space)
+  {
+    my $newstate=0;
+    $newstate|=1 if $strong;
+    $newstate|=2 if $emphasis;
+    
+    if ($curstate>$newstate) # if we were in some <i> or <b> tag, now out of it but not cloed it yet in $textbuf
+    { 
+      $space = $previous_space;
+      $previous_space = '';
+    } else
+    {
+      $space='';
+    }
+  }
+  
   my $msp='';
   $msp=' ' if $txt =~ /\s$/;
   $txt =~ s/^ //;
@@ -307,8 +329,10 @@ sub moretext {
   if (!length($txt)) { # whitespace only???
     $space=(length($space) || length($msp)) && $realtext ? ' ' : '';
   } else {
+    $textbuf.=$previous_space; # if $realtext;
+    checkhl();
     $textbuf.=$space if $realtext;
-    $realtext=1,checkhl() unless $realtext;
+    $realtext=1;
     $textbuf.=$txt;
     $space=$msp;
   }
@@ -344,6 +368,32 @@ sub pbreak {
   } else {
     ++$lastempty if !$how;
   }
+}
+
+sub i_open
+{
+  ++$emphasis;
+  $textbuf.=$space; # commition buffered space before opening a tag
+  $space='';
+  checkhl();
+  
+}
+sub i_close
+{
+  --$emphasis;
+}
+
+sub b_open
+{
+  ++$strong;
+  $textbuf.=$space;  # commition buffered space before opening a tag
+  $space='';
+  checkhl();
+}
+
+sub b_close
+{
+  --$strong;
 }
 
 sub add_section {
@@ -386,13 +436,25 @@ sub add_image {
 }
 
 sub get_styles {
-  my $styles=$_[0]->attr('style');
-  return () unless $styles;
-  my @styles;
+  my $elem = shift;
+  my $styles= $elem->attr('style') || "";
+  my @l = ();
   for (split(/;/,$styles)) {
-    push (@styles,$1,$2) if /^\s*(\S+)\s*:\s*(\S+)\s*$/;
+    push (@l,$1,$2) if /^\s*(\S+)\s*:\s*(\S+)\s*$/;
   }
-  @styles;
+  my %styles = @l;
+  if ($elem->attr('class'))
+  {
+    my $class_style = $css->get_style_by_selector('.'.$elem->attr('class'));
+    if ($class_style)
+    {
+      foreach my $p (@{$class_style->{properties}}) # This is in ugly hack we are using CSS::Styles internals
+      {
+        $styles{$p->{property}} = $p->{simple_value};
+      }
+    }
+  }
+  return %styles;
 }
 
 sub element {
@@ -430,11 +492,9 @@ sub element {
 	  return;
 	} elsif ($class eq "intro") {
 	  pbreak();
-	  ++$emphasis;
-	  checkhl;
+	  i_open();
 	  element($_) for $elem->content_list;
-	  --$emphasis;
-	  checkhl;
+	  i_close();
 	  pbreak();
 	  return;
 	}
@@ -448,18 +508,30 @@ sub element {
     } elsif ($t =~ /^h(\d)/) {
       add_section($elem->as_text,$1*3);
       return;
-    } elsif ($minstyle && $t eq "span") {
+    } elsif ($t eq "span") {
       my %styles=get_styles($elem);
-      if ($styles{'font-size'} &&
-	  $styles{'font-size'} =~ /^(\d+(?:\.\d+)?)(?:pt)?$/ &&
-	  $1>=$minstyle && $1<=$maxstyle)
+      if ($minstyle)
       {
-	my $depth=36-$1;
-	$depth=1 if $depth<1;
-	$depth=20 if $depth>20;
-	add_section($elem->as_text,$depth);
-	return;
+        if ($styles{'font-size'} &&
+	    $styles{'font-size'} =~ /^(\d+(?:\.\d+)?)(?:pt)?$/ &&
+	    $1>=$minstyle && $1<=$maxstyle)
+          {
+	  my $depth=36-$1;
+	  $depth=1 if $depth<1;
+	  $depth=20 if $depth>20;
+	  add_section($elem->as_text,$depth);
+	  }
+      return;
       }
+      
+      i_open() if ($styles{'font-style'} && $styles{'font-style'} eq 'italic');
+      b_open() if ($styles{'font-weight'} && $styles{'font-weight'} eq 'bold');
+      
+      element($_) for $elem->content_list;
+      
+      b_close() if ($styles{'font-weight'} && $styles{'font-weight'} eq 'bold');
+      i_close() if ($styles{'font-style'} && $styles{'font-style'} eq 'italic');
+      return;
     } elsif ($minfont && $t eq "font") {
       my $size=$elem->attr('size');
       if ($size && $size>=$minfont) {
@@ -472,26 +544,20 @@ sub element {
     } elsif ($t eq "script" || $t eq "style") {
       return;
     } elsif ($t eq "i" || $t eq "em") {
-      ++$emphasis;
-      checkhl;
+      i_open();
       element($_) for $elem->content_list;
-      --$emphasis;
-      checkhl;
+      i_close();
       return;
     } elsif ($t eq "blockquote") {
       pbreak();
-      ++$emphasis;
-      checkhl;
+      i_open();
       element($_) for $elem->content_list;
-      --$emphasis;
-      checkhl;
+      i_close;
       return;
     } elsif ($t eq "b" || $t eq "strong") {
-      ++$strong;
-      checkhl;
+      b_open();
       element($_) for $elem->content_list;
-      --$strong;
-      checkhl;
+      b_close();
       return;
    } elsif ($t eq 'img') {
      my $src = $elem->attr('src');
@@ -527,6 +593,11 @@ sub element {
 		      !$Encoding && $content =~ /charset=(\S+)/i;
     } elsif ($elem->tag eq "title") {
       $Title=$elem->as_text;
+    } elsif ($elem->tag eq "style") {
+      foreach ($elem->content_list())
+      {
+        $css->read_string($_);
+      }
     }
   }
   element($_) for $elem->content_list;
