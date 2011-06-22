@@ -304,7 +304,6 @@ sub moretext {
   my $previous_space = $space;
   $space = '';
   $space=' ' if $txt =~ /^\s/;
-#  if ($space && $previous_space)
   if ($previous_space)
   {
     my $newstate=0;
@@ -342,7 +341,7 @@ sub checkhl { # check <b> and <i> highlighting
   my $newstate=0;
   $newstate|=1 if @_ ? $_[0] : $strong;
   $newstate|=2 if @_ ? $_[1] : $emphasis;
-  return if $curstate==$newstate || ($curstate==0 && !$realtext);
+  return if $curstate==$newstate; # || ($curstate==0 && !$realtext);
   # always close whatever is open
   $textbuf.="</$ST>" if $curstate&1;
   $textbuf.="</$EM>" if $curstate&2;
@@ -500,7 +499,13 @@ sub element {
 	}
       }
       pbreak(1); # start of p doesnt add an empty line, but it stops an unclosed paragraph
+      my %styles=get_styles($elem);
+      i_open() if ($styles{'font-style'} && $styles{'font-style'} eq 'italic');
+      b_open() if ($styles{'font-weight'} && $styles{'font-weight'} eq 'bold');
       element($_) for $elem->content_list;
+      b_close() if ($styles{'font-weight'} && $styles{'font-weight'} eq 'bold');
+      i_close() if ($styles{'font-style'} && $styles{'font-style'} eq 'italic');
+
       pbreak(); # end of paragraph always closes
       return;
     } elsif ($t eq "dd" || $t eq "br") {
@@ -526,8 +531,32 @@ sub element {
       
       i_open() if ($styles{'font-style'} && $styles{'font-style'} eq 'italic');
       b_open() if ($styles{'font-weight'} && $styles{'font-weight'} eq 'bold');
+
+      my $stored_emph;
+      if ($styles{'font-style'} && $styles{'font-style'} eq 'normal')
+      {
+        $stored_emph = $emphasis;
+        $emphasis = 0;
+        checkhl();
+      }
+      
+      my $stored_strong;
+      if ($styles{'font-weight'} && $styles{'font-weight'} eq 'normal')
+      {
+        $stored_strong = $strong;
+        $strong = 0;
+        checkhl();
+      }
       
       element($_) for $elem->content_list;
+      if ($styles{'font-style'} && $styles{'font-style'} eq 'normal')
+      {
+        $emphasis = $stored_emph;
+      }
+      if ($styles{'font-weight'} && $styles{'font-weight'} eq 'normal')
+      {
+         $strong = $stored_strong;
+      }
       
       b_close() if ($styles{'font-weight'} && $styles{'font-weight'} eq 'bold');
       i_close() if ($styles{'font-style'} && $styles{'font-style'} eq 'italic');
