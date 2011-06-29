@@ -69,8 +69,8 @@ sub _extend_description_fill_node
   {
     my $p=$doc->createElement('p');
     $node->appendChild($p);
-    $p->appendChild($doc->createTextNode(' '));    
-    
+    $p->appendChild($doc->createTextNode(' '));
+
   }
   elsif ($content =~ /$\#DATE\#\s*(.*)/ )
   {
@@ -105,7 +105,7 @@ sub _extend_description_fill_node
   
 }
 
-# ##################################	
+# ##################################
 
 sub _extend_description_fill_complex_node
 {
@@ -115,9 +115,9 @@ sub _extend_description_fill_complex_node
   my $name=$node->nodeName();
   my $doc=$node->getOwnerDocument;
   my $children_info=_get_node_children_info($name);
-  
+
   my %name_to_num=();
-  for(my $i=0;$i<=$#{@$children_info};$i++)
+  for(my $i=0;$i<=$#$children_info;$i++)
   {
     if ($children_info->[$i]->{'ver'} <= $par->{version})
     {
@@ -141,7 +141,7 @@ sub _extend_description_fill_complex_node
 	       ( $children_info->[$i]->{'opt'} == 1 && $par->{'optional'} == 1 ) ) &&
 	     ( $children_info->[$i]->{'ver'} <= $par->{version} ) )
 	{
-          my $offset_node = $doc->createTextNode("\n".(' ' x $par->{'offset'}));      
+          my $offset_node = $doc->createTextNode("\n".(' ' x $par->{'offset'}));
 	  my $new_child   = $doc->createElement($children_info->[$i]->{'name'});
 	  my $content     = $children_info->[$i]->{'content'};
 	
@@ -161,14 +161,14 @@ sub _extend_description_fill_complex_node
   }
   
   # When we processed all children of the $node then we add childern that should go after last_processed_child
-  for(my $i=$last_processed_child_num+1;$i<=$#{@$children_info};$i++)             
+  for(my $i=$last_processed_child_num+1;$i<=$#$children_info;$i++)
   {      
    if ( ( ( $children_info->[$i]->{'opt'} == 0 ) ||
           ( $children_info->[$i]->{'opt'} == 1 && $par->{'optional'} == 1 ) ) &&
         ( $children_info->[$i]->{'ver'} <= $par->{version} ) )
-    {                                                                             
-      my $offset_node = $doc->createTextNode("\n".(' ' x $par->{'offset'}));        
-      my $new_child   = $doc->createElement($children_info->[$i]->{'name'});        
+    {
+      my $offset_node = $doc->createTextNode("\n".(' ' x $par->{'offset'}));
+      my $new_child   = $doc->createElement($children_info->[$i]->{'name'});
       my $content     = $children_info->[$i]->{'content'};
     
       $node->appendChild($offset_node) if $i!=$last_processed_child_num+1;
@@ -215,7 +215,7 @@ sub _get_node_children_info
 	{'name' => 'book-title'	,'opt'=>0, 'ver'=> 2, 'content'=>'#SPACE#'},
 	{'name' => 'annotation'	,'opt'=>1, 'ver'=> 2, 'content'=>'#PARAGRAPH#'},
 	{'name' => 'keywords'	,'opt'=>1, 'ver'=> 2, 'content'=>'#SPACE#'},
-	{'name' => 'date'	,'opt'=>1, 'ver'=> 2, 'content'=>'#DATE#'},   
+	{'name' => 'date'	,'opt'=>1, 'ver'=> 2, 'content'=>'#DATE#'},
 	{'name' => 'coverpage'	,'opt'=>1, 'ver'=> 2, 'content'=>'#IMAGE#'},
 	{'name' => 'lang'	,'opt'=>0, 'ver'=> 2, 'content'=>'#SPACE#'},
 	{'name' => 'src-lang'	,'opt'=>1, 'ver'=> 2, 'content'=>'#SPACE#'},
@@ -251,7 +251,7 @@ sub _get_node_children_info
 	{'name' => 'id'		 , 'opt'=>0, 'ver'=> 2  , 'content'=>"#TEXT# $id"},
 	{'name' => 'version'	 , 'opt'=>0, 'ver'=> 2  , 'content'=>'#TEXT# 1.0'},
 	{'name' => 'history'	 , 'opt'=>1, 'ver'=> 2  , 'content'=>'#PARAGRAPH#'},
-	{'name' => 'publisher'	 , 'opt'=>1, 'ver'=> 2.2, 'content'=>'#COMPLEX#'},    
+	{'name' => 'publisher'	 , 'opt'=>1, 'ver'=> 2.2, 'content'=>'#COMPLEX#'},
     ];
   
   } elsif ($name eq 'publish-info')

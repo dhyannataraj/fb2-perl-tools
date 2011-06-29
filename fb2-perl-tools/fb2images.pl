@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
 use strict;
-use XML::DOM;
+use XML::LibXML;
 use Getopt::Long qw(HelpMessage VersionMessage);
 use File::MMagic;
 use MIME::Base64 qw(encode_base64);
 use Encode;
-our $VERSION=0.01;
+our $VERSION=0.02;
 
 =head1 NAME
 
@@ -29,12 +29,20 @@ Input image names are used as E<lt>binaryE<gt> element ids.
 
 =head1 BUGS
 
-Utility doesn't check if image reference presents  in the file, and is
+Utility doesn't check if image reference presents in the file, and is
 unable to add references.
 
-=head1 AUTHOR
+=head1 VERSION
 
-Nikolay Shaplov <shaplov@sf.net>
+0.02
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2006-2011 by Swami Dhyan Nataraj (Nikolay Shaplov)
+
+This library is free software; you can redistribute it and/or modify
+it under the terms of the General Public License (GPL).  For
+more information, see http://www.fsf.org/licenses/gpl.txt
 
 =cut
 
@@ -50,8 +58,8 @@ my $opts={};
   $opts->{'list'}=1 if @ARGV && ! %{$opts};
   my $FileName= $ARGV[0];
 
-  my $parser = new XML::DOM::Parser;
-  my $doc = $parser->parsefile ($FileName);
+  my $parser = XML::LibXML->new();
+  my $doc = $parser->parse_file($FileName);
 
   if ( $opts->{'extract'} )
   {
@@ -75,16 +83,12 @@ my $opts={};
         my $backup = $FileName . "~";
         unlink $backup;
         rename $FileName, $backup or warn("Cannot make backup copy: $!");
-        my $encoding=$doc->getXMLDecl()->getEncoding();
-        # This call of Encode::decode fixes problem in XML::DOM which do not
-        # mark entire output utf8 correctly.
-        my $data = decode("utf8",$doc->toString);
-        open DST,">:encoding($encoding)",$FileName;
+        my $data = $doc->toString;
+        open DST,">",$FileName;
+
         print DST $data;
         close DST;
   }
-
-  $doc->dispose; # Avoid memory leaks - cleanup circular references
 
 sub printImageList
 {
@@ -102,12 +106,8 @@ sub getImageList
 
   foreach ($doc->getDocumentElement()->getElementsByTagName('binary' ,0) )
   {
-    my $id=$_->getAttributes()->getNamedItem('id');
-    if ($id)
-    {
-      $id=$id->getNodeValue();
-      @list= (@list,$id);
-    }
+    my $id=$_->getAttribute('id');
+    push @list,$id  if ($id)
   }
   return \@list
 }
@@ -119,12 +119,8 @@ sub getUsedIdList
 
   foreach ($doc->getDocumentElement()->getElementsByTagName('*' ,1) )
   {
-    my $id=$_->getAttributes()->getNamedItem('id');
-    if ($id)
-    {
-      $id=$id->getNodeValue();
-      @list= (@list,$id);
-    }
+    my $id=$_->getAttribute('id');
+    push @list,$id if $id
   }
   return \@list
 }
@@ -200,7 +196,7 @@ sub RemoveImages
         {
           my $prev = $binary->getPreviousSibling();
           last until defined($prev);
-          last until ($prev->getNodeType() eq XML::DOM::TEXT_NODE && $prev->getData() =~ /^\s*$/ );
+          last until ($prev->nodeType() == XML_TEXT_NODE && $prev->getData() =~ /^\s*$/ );
           $root->removeChild($prev);
         }
         $root->removeChild($binary);
@@ -219,11 +215,11 @@ sub getText
   my $text = '';
   for my $node ($elem->getChildNodes())
   {
-    if ($node->getNodeType() eq XML::DOM::ELEMENT_NODE)
+    if ($node->nodeType() == XML_ELEMENT_NODE)
     {
       $text .= getText($node);
     }
-    elsif ($node->getNodeType() eq XML::DOM::TEXT_NODE)
+    elsif ($node->nodeType() == XML_TEXT_NODE)
     {
       $text .= $node->getData();
     }

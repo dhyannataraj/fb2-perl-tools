@@ -1,0 +1,3 @@
+html2fb2.pl				2011-06-21	Added limited CSS support in order to convert files form OpenOffice.org
+fb2::Description::Extend		2011-06-29	Seems to be fixes for modern perl versions
+fb2images.pl			0.02	2011-06-29	Move form XML::DOM to XML::LibXML
