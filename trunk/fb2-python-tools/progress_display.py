@@ -7,10 +7,12 @@ except:
 import sys, time
 
 class progress_display:
-	def __init__( self, expected_count, fout = sys.stderr ):
+	def __init__( self, expected_count, width = 75, fout = sys.stderr ):
 		self.__start = time.time()
 		self.__expected_count = expected_count
 		self.__count = 0
+		self.__width = width - 25
+		
 		self.__fout = fout
 		self.__progress( 0, 0 )
 
@@ -23,20 +25,30 @@ class progress_display:
 
 	def __progress( self, perc, delta ):
 		estimated = round( perc and delta / perc )
-		print >>self.__fout, '\r|%s%s|%3d%% %s/%s' % ( '#' * int( 50 * perc ), '.' * ( 50 - int( 50 * perc ) ), int( 100 * perc ), time.strftime( '%X', time.gmtime( round( delta ) ) ), time.strftime( '%X', time.gmtime( estimated ) ) ),
+		width = self.__width
+		if width > 0:
+			bar = '|' + '#' * int( width * perc ) + '.' * ( width - int( width * perc ) ) + '|'
+		else:
+			bar = ''
+		self.__fout.write( '\r%s%3d%% %s/%s' % ( bar, int( 100 * perc ), time.strftime( '%X', time.gmtime( round( delta ) ) ), time.strftime( '%X', time.gmtime( estimated ) ) ) )
 
-def progress_iter( iter, vis = None, fout = sys.stderr ):
+def progress_iter( iter, width = 75, vis = None, fout = sys.stderr ):
 	if not vis: vis = lambda x: x
 	start = time.time()
 	data = list( iter )
+	width -= 25
 	count = 0
 	def _progress( perc, delta ):
 		estimated = round( perc and delta / perc )
-		print >>fout, '\r|%s%s|%3d%% %s/%s' % ( '#' * int( 50 * perc ), '.' * ( 50 - int( 50 * perc ) ), int( 100 * perc ), time.strftime( '%X', time.gmtime( round( delta ) ) ), time.strftime( '%X', time.gmtime( estimated ) ) ),
+		if width > 0:
+			bar = '|' + '#' * int( width * perc ) + '.' * ( width - int( width * perc ) ) + '|'
+		else:
+			bar = ''
+		fout.write( '\r%s%3d%% %s/%s ' % ( bar, int( 100 * perc ), time.strftime( '%X', time.gmtime( round( delta ) ) ), time.strftime( '%X', time.gmtime( estimated ) ) ) )
 
 	_progress( 0, 0 )
 	for value in data:
 		yield value
 		count += 1
 		_progress( float( count ) / len( data  ), time.time() - start )
-	print >>fout, ' ' * 50
+	print >>fout
