@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 '''\
 Usage:
@@ -17,6 +17,7 @@ Options:
 File name '-' means standard input.
 '''
 
+from __future__ import division, print_function, unicode_literals
 __author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
 __version__ = '0.2'
 __all__ = []
@@ -30,6 +31,11 @@ import sys, xml.etree.ElementTree, re, getopt, os, os.path, filecmp
 
 filesystemencoding = sys.getfilesystemencoding()
 # filesystemencoding = 'utf-8'
+def warn( tag, path ):
+	# hack for Python 2.x
+	if isinstance( path, bytes ):
+		path = path.encode( filesystemencoding )
+	print( tag, path )
 
 def genname( dirname, filename, otherpath = None ):
 	filename = filename.replace( '"', "'" )
@@ -40,8 +46,8 @@ def genname( dirname, filename, otherpath = None ):
 	try:
 		if not os.path.exists( dirname ):
 			os.makedirs( dirname )
-	except os.error, err:
-		print >>sys.stderr, err
+	except os.error as err:
+		print( err, file = sys.stderr )
 		pass
 	count = 0
 	path = os.path.join( dirname, filename )
@@ -50,19 +56,19 @@ def genname( dirname, filename, otherpath = None ):
 			if os.path.samefile( path, otherpath ):
 				return None
 			if filecmp.cmp( path, otherpath, 0 ):
-				print '#', path.encode( filesystemencoding )
+				warn( '#', path )
 				return None
 		count += 1
 		path = os.path.join( dirname, '%s__%d%s' % (basename, count, suffix) )
 	if count > 0:
-		print '!', path.encode( filesystemencoding )
+		warn( '!', path )
 	return path
 
 def mklink( src, dst ):
 	try:
 		os.link( src, dst )
-	except OSError, err:
-		print '@', dst.encode( filesystemencoding )
+	except OSError as err:
+		warn( '@', dst )
 		os.symlink( src, dst )
 
 def linkauthors( path, authornames, book_title ):
@@ -83,14 +89,14 @@ def getauthorname( author ):
 		authorname += ' [%s]' % nickname
 	return authorname
 
-xml_re = re.compile( r'<\?xml version="(?:[^">]*)" encoding="(?:[^">]*)"\?>', re.DOTALL )
-desc_re = re.compile( r'<description>.*?</description>', re.DOTALL )
+xml_re = re.compile( br'<\?xml version="(?:[^">]*)" encoding="(?:[^">]*)"\?>', re.DOTALL )
+desc_re = re.compile( br'<description>.*?</description>', re.DOTALL )
 
 if __name__ == '__main__':
 	try:
 		opts, args = getopt.getopt( sys.argv[1:], '@:hf:o:svV', ['help', 'format=', 'output=', 'symbolic', 'version', 'progress'] )
-	except getopt.GetoptError, err:
-		print >>sys.stderr, 'Error:', err
+	except getopt.GetoptError as err:
+		print( 'Error:', err, file = sys.stderr )
 		sys.exit( 2 )
 	outputdir = '.'
 	verbose = False
@@ -100,13 +106,13 @@ if __name__ == '__main__':
 			sys.stdout.write( __doc__ )
 			sys.exit( 0 )
 		elif option in ('-V', '--version'):
-			print __version__
+			print( __version__ )
 			sys.exit( 0 )
 		elif option == '-@':
 			if value == '-':
-				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
+				args.extend( line.rstrip( str( '\n' ) ) for line in sys.stdin )
 			else:
-				args.extend( line.rstrip( '\n' ) for line in open( value ) )
+				args.extend( line.rstrip( str( '\n' ) ) for line in open( value ) )
 		elif option in ('-v', '--progress'):
 			verbose = True
 		elif option in ('-f', '--format'):
@@ -123,24 +129,23 @@ if __name__ == '__main__':
 	for fb2name in args:
 		srcpath = os.path.abspath( fb2name )
 		#if verbose:
-		#	print fb2name
+		#	print( fb2name )
 		try:
-			f = open( srcpath )
-			data = ''
-			while True:
-				data += f.read( 1 << 13 )
-				try:
-					doc = xml_re.match( data ).group() + '\n' + desc_re.search( data ).group()
-				except AttributeError:
-					continue
-				break
-			f.close()
-			doc = doc.replace( 'xlink:href=', 'href=' ).replace( 'l:href=', 'href=' )
+			with open( srcpath, 'rb' ) as f:
+				data = b''
+				while True:
+					data += f.read( 1 << 13 )
+					try:
+						doc = xml_re.match( data ).group() + b'\n' + desc_re.search( data ).group()
+					except AttributeError:
+						continue
+					break
+			doc = doc.replace( b'xlink:href=', b'href=' ).replace( b'l:href=', b'href=' )
 
 			try:
 				description = xml.etree.ElementTree.fromstring( doc )
 			except:
-				print doc
+				print( doc )
 				raise
 
 			title_info = description.find( 'title-info' )
@@ -178,7 +183,7 @@ if __name__ == '__main__':
 					linkauthors( path, authornames, book_title )
 			elif format == 'series':
 				for sequence_name, sequence_number, sequence_src_name in sequences:
-					dirname = sequence_name
+					dirname = sequence_name or '-'
 					if sequence_src_name:
 						dirname += ' [%s]' % sequence_src_name
 					dirname += ' : ' + authornames_str
@@ -214,7 +219,7 @@ if __name__ == '__main__':
 					mklink( srcpath, path )
 		except (KeyboardInterrupt, SystemExit):
 			raise
-		except Exception, err:
-			print >>sys.stderr, 'Error processing "%s":' % fb2name
-			print >>sys.stderr, err
+		except Exception as err:
+			print( str( 'Error processing "%s":' ) % fb2name, file = sys.stderr )
+			print( err, file = sys.stderr )
 			sys.exit( 1 )

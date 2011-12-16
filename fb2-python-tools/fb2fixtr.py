@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 '''\
 Fix some frequent OCR and conversion errors in FictionBook2 files.
@@ -20,36 +20,38 @@ Options:
 
 File name '-' means standard input.
 '''
+
+from __future__ import division, print_function, unicode_literals
 __author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
 __version__ = '0.2'
 __all__ = []
 
 import string, re
-import sys, getopt, os, os.path, xml.dom.minidom, codecs
+import sys, getopt, os, os.path, xml.dom.minidom, codecs, io
 
 quick = False
 
-rus_lowercase = u'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'
+rus_lowercase = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'
 rus_uppercase = rus_lowercase.upper()
 rus_letters = rus_lowercase + rus_uppercase
 
-cyr_lowercase = rus_lowercase + u'іїєґ'
+cyr_lowercase = rus_lowercase + 'іїєґ'
 cyr_uppercase = cyr_lowercase.upper()
 cyr_letters = cyr_lowercase + cyr_uppercase
 
-rus_tr = u'аАВсСеЕНКМпоОрРгТихХу'
-rus_lat_tr = u'aABcCeEHKMnoOpPrTuxXy'
-cyr_tr = u'аАВсСеЕНіІКМпоОрРгТихХу'
-cyr_lat_tr = u'aABcCeEHiIKMnoOpPrTuxXy'
+rus_tr = 'аАВсСеЕНКМпоОрРгТихХу'
+rus_lat_tr = 'aABcCeEHKMnoOpPrTuxXy'
+cyr_tr = 'аАВсСеЕНіІКМпоОрРгТихХу'
+cyr_lat_tr = 'aABcCeEHiIKMnoOpPrTuxXy'
 
 lat2cyr = dict( zip( cyr_letters + cyr_lat_tr, cyr_letters + cyr_tr ) )
 cyr2lat = dict( zip( string.ascii_letters + cyr_tr, string.ascii_letters + cyr_lat_tr ) )
-num2cyr = {u'0': u'О', u'3': u'З', u'6': u'б'}
+num2cyr = {'0': 'О', '3': 'З', '6': 'б'}
 
-word_re = re.compile( ur'([\w]+)', re.UNICODE )
+word_re = re.compile( r'([\w]+)', re.UNICODE )
 
 def maketest( chars ):
-	return re.compile( ur'\A[' + chars + ur']+\Z', re.UNICODE ).match
+	return re.compile( r'\A[' + chars + r']+\Z', re.UNICODE ).match
 
 # islat = maketest( string.ascii_letters )
 islat = maketest( string.ascii_letters + '_' )
@@ -61,14 +63,14 @@ ispseudo = maketest( cyr_lat_tr + cyr_tr  )
 ispseudolat = maketest( string.ascii_letters + rus_tr )
 ispseudorus = maketest( rus_letters + rus_lat_tr  )
 ispseudocyr = maketest( cyr_letters + cyr_lat_tr  )
-isrusJ = maketest( rus_letters + u'\u0408' )
-isnumber = re.compile( ur'\A\d+\Z', re.UNICODE ).match
-isroman = re.compile( ur'\A(?:M{0,3})(?:D?C{0,3}|C[DM])(?:L?X{0,3}|X[LC])(?:V?I{0,3}|I[VX])\Z' ).match
-beginnumber_re = re.compile( ur'\A([0-9]+)(\w+)\Z', re.UNICODE )
-endnumber_re = re.compile( ur'\A(\w+?)([0-9]+)\Z', re.UNICODE )
-iscross = re.compile( ur'\A[0-9]+(?:х[0-9]+)+\Z' ).match
+isrusJ = maketest( rus_letters + '\u0408' )
+isnumber = re.compile( r'\A\d+\Z', re.UNICODE ).match
+isroman = re.compile( r'\A(?:M{0,3})(?:D?C{0,3}|C[DM])(?:L?X{0,3}|X[LC])(?:V?I{0,3}|I[VX])\Z' ).match
+beginnumber_re = re.compile( r'\A([0-9]+)(\w+)\Z', re.UNICODE )
+endnumber_re = re.compile( r'\A(\w+?)([0-9]+)\Z', re.UNICODE )
+iscross = re.compile( r'\A[0-9]+(?:х[0-9]+)+\Z' ).match
 
-hasdigits = re.compile( ur'\A.*[0-9].*\Z', re.UNICODE ).match
+hasdigits = re.compile( r'\A.*[0-9].*\Z', re.UNICODE ).match
 
 def tocyr( word ):
 	return ''.join( lat2cyr[c] for c in word )
@@ -76,10 +78,10 @@ def tocyr( word ):
 def tolat( word ):
 	return ''.join( cyr2lat[c] for c in word )
 
-def readlist( f ):
-	for line in f:
-		line = line.rstrip( '\n' ).decode( 'utf-8' )
-		if len( line ) > 0 and line[0] != '#':
+def readlist( fname ):
+	for line in io.open( fname, 'rt', encoding = 'utf-8' ):
+		line = line.rstrip( '\n' )
+		if line and line[0] != '#':
 			yield line
 
 reserved_tr = set()
@@ -91,11 +93,11 @@ def is_reserved_cyr( word ):
 
 translates = {}
 try:
-	translates.update( line.split( ' ', 1 ) for line in readlist( open( 'replaces' ) ) )
+	translates.update( line.split( ' ', 1 ) for line in readlist( 'replaces' ) )
 except:
 	pass
 try:
-	translates.update( (w, w) for w in readlist( open( 'reserved' ) ) )
+	translates.update( (w, w) for w in readlist( 'reserved' ) )
 except:
 	pass
 
@@ -103,7 +105,9 @@ logfile = None
 global filename
 def logtr( word, type, *args ):
 	if logfile:
-		print >>logfile, '%s:' % filename, word.encode( 'utf-8' ), type, ' '.join( args ).encode( 'utf-8' )
+		# hack for Python 2.x
+		fn = filename.decode( 'utf-8' ) if isinstance( filename, bytes ) else filename
+		print( '%s:' % fn, word, type, *args, file = logfile )
 
 def tryconv( s, e1, e2 ):
 	try:
@@ -131,7 +135,7 @@ def fixtr_word( word ):
 		if cyr_word in  reserved_tr and lat_word not in reserved_tr:
 			return cyr_word
 		# Только кириллическа 'Н' заменена на латинскую 'H' -- шуточки FIDO
-		if iscyr( word.replace( u'H', u'Н' ) ):
+		if iscyr( word.replace( 'H', 'Н' ) ):
 			return cyr_word
 
 		# Неопределённость
@@ -156,16 +160,16 @@ def fixtr_word( word ):
 		m = endnumber_re.match( word )
 		if m and not hasdigits( m.group( 1 ) ):
 			# Метки часто содержат в себе номер
-			if m.group( 1 ) in (ur'note', ur'note_', ur'Note', ur'footnote', ur'child_', ur'FbAutId_', ur'comment_', ur'text_', ur'N', ur'N_', ur'No'):
+			if m.group( 1 ) in (r'note', r'note_', r'Note', r'footnote', r'child_', r'FbAutId_', r'comment_', r'text_', r'N', r'N_', r'No'):
 				return word
-	
+
 			# Между словом и номером пропущен пробел
-			if m.group( 1 ) in (ur'Глава', ur'ГЛАВА', ur'глава'):
-				return m.expand( ur'\1 \2' )
+			if m.group( 1 ) in (r'Глава', r'ГЛАВА', r'глава'):
+				return m.expand( r'\1 \2' )
 
 			# Начальная единица года распозналась как 'I"
-			if re.match( ur'\AI[89][0-9][0-9]\Z', word ):
-				return u'1' + word[1:]
+			if re.match( r'\AI[89][0-9][0-9]\Z', word ):
+				return '1' + word[1:]
 			# Просто собираем статистику
 			logtr( word, '!' )
 			return word
@@ -174,34 +178,34 @@ def fixtr_word( word ):
 		m = beginnumber_re.match( word )
 		if m and not hasdigits( m.group( 2 ) ):
 			# Физические единицы отделяем неразрывным пробелом
-			if m.group( 2 ) in (u'гг', u'мг', u'г', u'кг', u'мл', u'л', u'ч', u'мм', u'см', u'дм', u'м', u'км' ):
-				return m.expand( u'\\1\u00A0\\2' )
+			if m.group( 2 ) in ('гг', 'мг', 'г', 'кг', 'мл', 'л', 'ч', 'мм', 'см', 'дм', 'м', 'км' ):
+				return m.expand( '\\1\u00A0\\2' )
 			# Русские окончания отделяем дефисом
-			if m.group( 2 ) in (u'ый', u'ой', u'й', u'ым', u'ом', u'я', u'ая', u'е', u'ое', u'го', u'ого', u'ю', u'ую'):
-				return m.expand( ur'\1-\2' )
+			if m.group( 2 ) in ('ый', 'ой', 'й', 'ым', 'ом', 'я', 'ая', 'е', 'ое', 'го', 'ого', 'ю', 'ую'):
+				return m.expand( r'\1-\2' )
 			# А английские оставляем так
 			if m.group( 2 ) in ('st', 'nd', 'rd', 'th', 's', 'd', 'ff', 'mm', 'cm', 'mm', 'km', 'unt', 'cc', 'F'):
 				return word
-			if word[0] in u'036' and ( iscyrlower( word[1:] ) or iscyrupper( word[1:] ) ):
+			if word[0] in '036' and ( iscyrlower( word[1:] ) or iscyrupper( word[1:] ) ):
 				return num2cyr[word[0]] + word[1:]
 			# Иначе просто собираем статистику
 			logtr( word, '!' )
 			return word
 
 		# Начальная единица распозналась как 'I"
-		m = re.match( ur'\AI[0-9]+(?:st|nd|rd|th|s|d)\Z', word )
+		m = re.match( r'\AI[0-9]+(?:st|nd|rd|th|s|d)\Z', word )
 		if m:
-			return u'1' + word[1:]
+			return '1' + word[1:]
 
 		# Возможно цифра -- на самом деле буква.
 		# Дело тёмное и рискованное.
-		word2 = word.replace( u'ь1', u'ы' ).replace( u'Ь1', u'Ы' )
+		word2 = word.replace( 'ь1', 'ы' ).replace( 'Ь1', 'Ы' )
 		if word2 != word:
 			if ispseudorus( word2 ):
 				return tocyr( word2 )
 
-		if re.search( ur'6[аеиоуaeuoy]|[аеиоуaeuoy]6', word ):
-			word2 = word.replace( u'6', u'б' )
+		if re.search( r'6[аеиоуaeuoy]|[аеиоуaeuoy]6', word ):
+			word2 = word.replace( '6', 'б' )
 			if ispseudorus( word2 ):
 				return tocyr( word2 )
 
@@ -218,31 +222,31 @@ def fixtr_word( word ):
 
 	# Слово состоит из кириллических букв и похожих на кириллические и содержит i с точкой
 	# Явно (псевдо)украинское или старорусское
-	if (u'i' in word or u'I' in word) and ispseudocyr( word ):
+	if ('i' in word or 'I' in word) and ispseudocyr( word ):
 		# Часто 'п', за которой следуют 'о' или 'е' неправильно распознаётся
-		word2 = re.sub( u'^ii|^[гт]i(?=о)|[гi]i(?=[еоeo])', u'п', word )
+		word2 = re.sub( '^ii|^[гт]i(?=о)|[гi]i(?=[еоeo])', 'п', word )
 		# Также начальные 'Ш' и 'П'
-		word2 = re.sub( u'^III', u'Ш', word2 )
-		word2 = re.sub( u'^II', u'П', word2 )
+		word2 = re.sub( '^III', 'Ш', word2 )
+		word2 = re.sub( '^II', 'П', word2 )
 		# Украинское окончание
-		word2 = re.sub( u'ii$', u'ії', word2 )
-		word2 = re.sub( u'II$', u'ІЇ', word2 )
+		word2 = re.sub( 'ii$', 'ії', word2 )
+		word2 = re.sub( 'II$', 'ІЇ', word2 )
 		word2 = tocyr( word2 )
 		return word2
 
 	# Слово состоит из русских букв и непонятного символа, похожего на J.
 	# На самом деле это 'ё'
-	if u'\u0408' in word and isrusJ( word ) and word.replace( u'\u0408', u'' ):
-		return word.replace( u'\u0408', u'ё' )
+	if '\u0408' in word and isrusJ( word ) and word.replace( '\u0408', '' ):
+		return word.replace( '\u0408', 'ё' )
 	# Слетевшая кодировка для кавычек-ёлочек
-	if word[0] == u'\u0458' and isrus( word[1:] ):
-		return u'\xab' + word[1:]
-	if word[-1] == u'\u0405' and isrus( word[:-1] ):
-		return word[:-1] + u'\xbb'
+	if word[0] == '\u0458' and isrus( word[1:] ):
+		return '\xab' + word[1:]
+	if word[-1] == '\u0405' and isrus( word[:-1] ):
+		return word[:-1] + '\xbb'
 
 	# Для обозначения ударения в русском слове использованы диакритические знаки.
-	for c in u'áéúóý':
-		if isrus( word.replace( c, u'' ) ):
+	for c in 'áéúóý':
+		if isrus( word.replace( c, '' ) ):
 			return word
 
 	# Возможно оригинальный текст был в европейской кодировке iso-8859-15,
@@ -260,26 +264,26 @@ def fixtr_word( word ):
 	logtr( word, '!' )
 	return word
 
-utf_illegal_pref_re = re.compile( u'\u0432\u0402(?:\ufffd|[\u2000-\u203f])?', re.DOTALL )
+utf_illegal_pref_re = re.compile( '\u0432\u0402(?:\ufffd|[\u2000-\u203f])?', re.DOTALL )
 
 def fix_utf_illegal_pref( m ):
 	data = m.group()
-	if data == u'\u0432\u0402' or data == u'\u0432\u0402\ufffd':
-		return u'\u2018'
+	if data == '\u0432\u0402' or data == '\u0432\u0402\ufffd':
+		return '\u2018'
 	return data.encode( 'cp1251' ).decode( 'utf-8' )
 
 def fixtr_text( text ):
 	global quick
 
 	changed = False
-	if u'\u0432\u0402' in text: #'вЂ'
+	if '\u0432\u0402' in text: #'вЂ'
 		# Указана кодировка cp1251, а на самом деле -- utf-8
 		text = utf_illegal_pref_re.sub( fix_utf_illegal_pref, text )
 		changed = True
 
 	# Символы номера и копирайта, оставшиеся с HTML
-	text = text.replace( u'&#x2116;', u'\u2116' )
-	text = text.replace( u'&#169;', u'\xa9' )
+	text = text.replace( '&#x2116;', '\u2116' )
+	text = text.replace( '&#169;', '\xa9' )
 
 	# Разбиваем текст на слова и обрабатываем их по отдельности.
 	# Потом склеиваем.
@@ -302,7 +306,7 @@ def fixtr_text( text ):
 				changed = True
 
 	if changed:
-		text = u''.join( words )
+		text = ''.join( words )
 
 	return text
 
@@ -324,7 +328,7 @@ def update_trdict( word ):
 		reserved_tr.add( word )
 
 def read_trdict( fname ):
-	for word in readlist( open( fname ) ):
+	for word in readlist( fname ):
 		update_trdict( word )
 		tword = word[0].upper() + word[1:]
 		if tword != word:
@@ -343,12 +347,12 @@ if __name__ == '__main__':
 	try:
 		opts, args = getopt.getopt( sys.argv[1:], '@:d:hko:qTvV',
 			['backup', 'dictionary=', 'help', 'log-file', 'progress', 'quick', 'text', 'version'] )
-	except getopt.GetoptError, err:
-		print >>sys.stderr, 'Error:', err
+	except getopt.GetoptError as err:
+		print( 'Error:', err, file = sys.stderr )
 		sys.exit( 2 )
 
 	keepBackup = False
-	backupSuffix = '.bak'
+	backupSuffix = str( '.bak' )
 	verbose = False
 	plainText = False
 
@@ -357,13 +361,13 @@ if __name__ == '__main__':
 			sys.stdout.write( __doc__ )
 			sys.exit( 0 )
 		elif option in ('-V', '--version'):
-			print __version__
+			print( __version__ )
 			sys.exit( 0 )
 		elif option == '-@':
 			if value == '-':
-				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
+				args.extend( line.rstrip( str( '\n' ) ) for line in sys.stdin )
 			else:
-				args.extend( line.rstrip( '\n' ) for line in open( value ) )
+				args.extend( line.rstrip( str( '\n' ) ) for line in open( value ) )
 		elif option in ('-k', '--backup'):
 			keepBackup = True
 		elif option in ('-q', '--quick'):
@@ -373,7 +377,7 @@ if __name__ == '__main__':
 		elif option in ('-T', '--text'):
 			plainText = True
 		elif option in ('-o', '--log-file'):
-			logfile = open( value, 'w' )
+			logfile = io.open( value, 'wt', encoding = 'utf-8' )
 		elif option in ('-d', '--dictionary'):
 			read_trdict( value )
 
@@ -386,40 +390,53 @@ if __name__ == '__main__':
 		try:
 			if plainText:
 				# Process plain text in UTF-8
-				if filename == '-':
-					data0 = sys.stdin.read().decode( 'UTF-8' )
-					data = fixtr_text( data0 )
-					sys.stdout.write( data.encode( 'UTF-8' ) )
+				if filename == str( '-' ):
+					if sys.version_info[0] >= 3:
+						data0 = sys.stdin.read()
+						data = fixtr_text( data0 )
+						sys.stdout.write( data )
+					else:
+						data0 = sys.stdin.read().decode( 'utf-8' )
+						data = fixtr_text( data0 )
+						sys.stdout.write( data.encode( 'utf-8' ) )
 				else:
-					data0 = open( filename, 'r' ).read().decode( 'UTF-8' )
+					data0 = io.open( filename, 'rt', encoding = 'utf-8' )
 					data = fixtr_text( data0 )
 					if data != data0:
-						tmpfilename = filename + '.tmp'
-						open( tmpfilename, 'w' ).write( data.encode( 'UTF-8' ) )
+						tmpfilename = filename + str( '.tmp' )
+						io.open( tmpfilename, 'wt', encoding = 'utf-8' ).write( data )
 						if keepBackup:
 							os.rename( filename, filename + backupSuffix )
 						os.rename( tmpfilename, filename )
 			else:
 				# Process FB2
-				if filename == '-':
-					doc = xml.dom.minidom.parse( sys.stdin )
-					encoding = doc.encoding or 'UTF-8'
+				if filename == str( '-' ):
+					if sys.version_info[0] >= 3:
+						f = sys.stdin.buffer.raw
+					else:
+						f = sys.stdin
+					doc = xml.dom.minidom.parse( f )
+					encoding = doc.encoding or str( 'utf-8' )
 					fixtr_fb2( doc )
-					writexml( doc, sys.stdout, encoding )
+					if sys.version_info[0] >= 3:
+						f = sys.stdout.buffer.raw
+					else:
+						f = sys.stdout
+					writexml( doc, f, encoding )
 				else:
-					doc = xml.dom.minidom.parse( open( filename, 'r' ) )
-					encoding = doc.encoding or 'UTF-8'
+					doc = xml.dom.minidom.parse( open( filename, 'rb' ) )
+					encoding = doc.encoding or str( 'utf-8' )
 					if fixtr_fb2( doc ):
-						tmpfilename = filename + '.tmp'
-						writexml( doc, open( tmpfilename, 'w' ), encoding )
+						tmpfilename = filename + str( '.tmp' )
+						writexml( doc, open( tmpfilename, 'wb' ), encoding )
 						if keepBackup:
 							os.rename( filename, filename + backupSuffix )
 						os.rename( tmpfilename, filename )
 		except (KeyboardInterrupt, SystemExit):
 			raise
-		except Exception, err:
-			print >>sys.stderr, 'Error processing "%s":' % filename
-			print >>sys.stderr, err
+		except Exception as err:
+			print( str( 'Error processing "%s":' ) % filename, file = sys.stderr )
+			print( err, file = sys.stderr )
 			raise
 
 	if logfile:

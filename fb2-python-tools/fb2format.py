@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 '''\
 Usage:
@@ -19,6 +19,7 @@ Options:
 File name '-' means standard input.
 '''
 
+from __future__ import division, print_function, unicode_literals
 __author__ = 'Serhiy Storchaka <storchaka@users.sourceforge.net>'
 __version__ = '0.2'
 
@@ -29,47 +30,47 @@ except:
 	pass
 
 import re, base64
-import sys, getopt, os, os.path, xml.dom.minidom, codecs, cStringIO
+import sys, getopt, os, os.path, xml.dom.minidom, codecs, io
 
-_spaces_re = re.compile( r'[ \t\r\n]{2,}|[\t\r\n]' )
-_empty_element_re = re.compile( r'<([^ >]+)([^>]*)(?<!/)></\1>' )
+_spaces_re = re.compile( br'[ \t\r\n]{2,}|[\t\r\n]' )
+_empty_element_re = re.compile( br'<([^ >]+)([^>]*)(?<!/)></\1>' )
 def _make_tags_switch( tags ):
-	return re.compile( '(%s)' % '|'.join( '<%s(?: [^>]*)?>.*?</%s>' % (tag, tag) for tag in tags ), re.DOTALL )
-_text_re = _make_tags_switch( ('p', 'v', 'subtitle', 'text-author', 'th', 'td') )
-_oneline_re = _make_tags_switch( ('title', 'author', 'translator') )
-_binary_re = re.compile( '(<binary [^>]*>)([^<]*)(</binary>)', re.DOTALL )
+	return re.compile( b'(' + b'|'.join( b'<' + tag + b'(?: [^>]*)?>.*?</' + tag + b'>' for tag in tags ) + b')', re.DOTALL )
+_text_re = _make_tags_switch( (b'p', b'v', b'subtitle', b'text-author', b'th', b'td') )
+_oneline_re = _make_tags_switch( (b'title', b'author', b'translator') )
+_binary_re = re.compile( b'(<binary [^>]*>)([^<]*)(</binary>)', re.DOTALL )
 
 def _remove_eols( m ):
-	return m.group().replace( '\n', '' )
+	return m.group().replace( b'\n', b'' )
 
 def _binary_squeeze( m ):
-	return m.group( 1 ) + m.group( 2 ).replace( ' ', '' ) + m.group( 3 )
+	return m.group( 1 ) + m.group( 2 ).replace( b' ', b'' ) + m.group( 3 )
 
 def _binary_recode( m ):
-	return m.group( 1 ) + base64.encodestring( base64.decodestring( m.group( 2 ) ) ) + m.group( 3 )
+	return m.group( 1 ) + base64.b64encode( base64.b64decode( m.group( 2 ) ) ) + m.group( 3 )
 
 def _squeeze_tag( s ):
 	if _text_re.match( s ):
 		return s
 	else:
-		return _empty_element_re.sub( r'<\1\2/>', s.strip( ' ' ).replace( '> ', '>' ).replace( ' <', '<' ) )
+		return _empty_element_re.sub( br'<\1\2/>', s.strip( b' ' ).replace( b'> ', b'>' ).replace( b' <', b'<' ) )
 
 def _format_tag( s ):
 	if _text_re.match( s ):
 		return s
 	else:
-		return _empty_element_re.sub( r'<\1\2/>', s.strip( ' ' ).replace( '> ', '>' ).replace( ' <', '<' ) ).replace( '><', '>\n<' )
+		return _empty_element_re.sub( br'<\1\2/>', s.strip( b' ' ).replace( b'> ', b'>' ).replace( b' <', b'<' ) ).replace( b'><', b'>\n<' )
 
 def fb2format( data, squeeze = False, squeezeBinary = False ):
-	data = _spaces_re.sub( ' ', data )
+	data = _spaces_re.sub( b' ', data )
 
 	if squeeze:
-		data = ''.join( _squeeze_tag( s ) for s in _text_re.split( data ) )
-		data = data.replace( '>', '>\n', 1 )
+		data = b''.join( _squeeze_tag( s ) for s in _text_re.split( data ) )
+		data = data.replace( b'>', b'>\n', 1 )
 	else:
-		data = '\n'.join( s for s in (_format_tag( s ) for s in _text_re.split( data )) if s )
+		data = b'\n'.join( s for s in (_format_tag( s ) for s in _text_re.split( data )) if s )
 		data = _oneline_re.sub( _remove_eols, data )
-		data = data.replace( '>\n<title>', '><title>' )
+		data = data.replace( b'>\n<title>', b'><title>' )
 
 	if squeezeBinary or squeeze:
 		data = _binary_re.sub( _binary_squeeze, data )
@@ -83,8 +84,8 @@ if __name__ == '__main__':
 	try:
 		opts, args = getopt.getopt( sys.argv[1:], '@:be:fhksvV',
 			['backup', 'encoding=', 'format', 'help', 'progress', 'squeeze', 'squeeze-binaries', 'version'] )
-	except getopt.GetoptError, err:
-		print >>sys.stderr, 'Error:', err
+	except getopt.GetoptError as err:
+		print( 'Error:', err, file = sys.stderr )
 		sys.exit( 2 )
 
 	forceEncoding = None
@@ -100,11 +101,11 @@ if __name__ == '__main__':
 			sys.stdout.write( __doc__ )
 			sys.exit( 0 )
 		elif option in ('-V', '--version'):
-			print __version__
+			print( __version__ )
 			sys.exit( 0 )
 		elif option == '-@':
 			if value == '-':
-				args.extend( line.rstrip( '\n' ) for line in sys.stdin )
+				args.extend( line.rstrip( str( '\n' ) ) for line in sys.stdin )
 			else:
 				args.extend( line.rstrip( '\n' ) for line in open( value ) )
 		elif option in ('-e', '--encoding'):
@@ -127,14 +128,18 @@ if __name__ == '__main__':
 
 	for filename in args:
 		try:
-			if filename == '-':
-				data0 = sys.stdin.read()
+			if filename == str( '-' ):
+				if sys.version_info[0] >= 3:
+					f = sys.stdin.buffer.raw
+				else:
+					f = sys.stdin
+				data0 = f.read()
 			else:
-				data0 = open( filename, 'r' ).read()
+				data0 = open( filename, 'rb' ).read()
 
-			doc = xml.dom.minidom.parseString( data0 )
-			encoding = forceEncoding or doc.encoding or 'UTF-8'
-			writer = cStringIO.StringIO()
+			doc = xml.dom.minidom.parse( io.BytesIO( data0 ) )
+			encoding = forceEncoding or doc.encoding or str( 'utf-8' )
+			writer = io.BytesIO()
 			writer = codecs.getwriter( encoding )( writer,  'xmlcharrefreplace' )
 			doc.writexml( writer, encoding = encoding )
 			data = writer.getvalue()
@@ -143,16 +148,20 @@ if __name__ == '__main__':
 			if format:
 				data = fb2format( data, squeeze = squeeze, squeezeBinary = squeezeBinary )
 
-			if filename == '-':
-				sys.stdout.write( data )
+			if filename == str( '-' ):
+				if sys.version_info[0] >= 3:
+					f = sys.stdout.buffer.raw
+				else:
+					f = sys.stdout
+				f.write( data )
 			elif data != data0:
-					tmpfilename = filename + '.tmp'
-					open( tmpfilename, 'w' ).write( data )
-					if keepBackup:
-						os.rename( filename, filename + backupSuffix )
-					os.rename( tmpfilename, filename )
+				tmpfilename = filename + str( '.tmp' )
+				open( tmpfilename, 'wb' ).write( data )
+				if keepBackup:
+					os.rename( filename, filename + backupSuffix )
+				os.rename( tmpfilename, filename )
 		except (KeyboardInterrupt, SystemExit):
 			raise
-		except Exception, err:
-			print >>sys.stderr, 'Error processing "%s":' % filename
-			print >>sys.stderr, err
+		except Exception as err:
+			print( str( 'Error processing "%s":' ) % filename, file = sys.stderr )
+			print( err, file = sys.stderr )
